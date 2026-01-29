@@ -1,0 +1,22 @@
+{
+  "id": "INT-002",
+  "date": "2025-10-13",
+  "method": "online interjú",
+  "participant": {
+    "pseudonym": "Márton",
+    "segment": "Középiskolai tanár"
+  },
+  "consent": true,
+  "insights": [
+    "A diákok akkor tanulnak motiváltan, ha azonnali visszajelzést kapnak.",
+    "A kvízek kiváló eszközök lennének, ha statisztikailag is elemezhetné a diákok eredményeit.",
+    "Szükség lenne tanári nézetre, ahol látszik, mely témák okoznak gondot a legtöbb diáknak."
+  ],
+  "pain_points": [
+    "A jelenlegi kvízplatformok nem adnak tanári statisztikát.",
+    "A kérdéskészítés manuális, sok időt vesz igénybe."
+  ],
+  "quotes": [
+    "\"Ha látnám, hogy a diákok mely kérdéseknél hibáznak, sokkal célzottabban tudnék segíteni.\""
+  ]
+}

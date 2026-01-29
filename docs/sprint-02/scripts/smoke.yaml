@@ -1,0 +1,13 @@
+name: sprint2_smoke
+description: Basic smoke test for Sprint 2 preview
+
+target:
+  url: ${PREVIEW_URL:-http://localhost:4173}
+
+checks:
+  - name: homepage-200
+    method: GET
+    path: /
+    expect:
+      status: 200
+      body_includes: "<div id=\"root\"></div>"

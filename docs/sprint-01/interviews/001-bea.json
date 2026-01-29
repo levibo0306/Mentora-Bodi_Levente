@@ -1,0 +1,23 @@
+{
+  "id": "INT-001",
+  "date": "2025-10-13",
+  "method": "személyes interjú",
+  "participant": {
+    "pseudonym": "Bea",
+    "segment": "Harmadéves joghallgató"
+  },
+  "consent": true,
+  "insights": [
+    "Sok könyvet kell megtanulnia a vizsgákra, és nehéz a tananyagot hosszú távon megjegyezni.",
+    "Szeretné, ha a kvízek segítenének a gyenge területekre koncentrálni.",
+    "A tanulás során hiányzik a visszajelzés, hogy valóban érti-e az anyagot."
+  ],
+  "pain_points": [
+    "A jelenlegi tanulóappok túl általános kérdéseket tesznek fel.",
+    "A tananyag mennyisége miatt nehéz rendszerezni a tudást.",
+    "A manuális ismétlés időigényes és monoton."
+  ],
+  "quotes": [
+    "\"Néha úgy érzem, hogy hiába olvasok, nem tudom, mit kéne gyakorolni – jó lenne, ha az app mutatná, miben vagyok gyenge.\""
+  ]
+}

@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuizForge - Interactive Learning Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FF6B35;
+            --secondary: #004E89;
+            --accent: #FFD23F;
+            --success: #06D6A0;
+            --danger: #EF476F;
+            --dark: #1A1A2E;
+            --light: #F8F9FA;
+            --purple: #9B59B6;
+            --easy: #06D6A0;
+            --medium: #FFD23F;
+            --hard: #FF6B35;
+            --expert: #EF476F;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--dark);
+        }
+
+        /* Login Page */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-box {
+            background: white;
+            border-radius: 24px;
+            padding: 60px 50px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.2);
+            max-width: 480px;
+            width: 100%;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: 42px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 15px;
+        }
+
+        .role-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .role-btn {
+            padding: 20px;
+            border: 3px solid #E0E0E0;
+            border-radius: 16px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--dark);
+        }
+
+        .role-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .role-btn.active {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, var(--primary), #FF8C61);
+            color: white;
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);
+        }
+
+        .role-btn.teacher.active {
+            background: linear-gradient(135deg, var(--secondary), #0077B6);
+            border-color: var(--secondary);
+            box-shadow: 0 10px 30px rgba(0, 78, 137, 0.3);
+        }
+
+        .role-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 14px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px 18px;
+            border: 2px solid #E0E0E0;
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.1);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--primary), #FF8C61);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);
+        }
+
+        /* Dashboard */
+        .dashboard {
+            display: none;
+            min-height: 100vh;
+            background: var(--light);
+        }
+
+        .dashboard.active {
+            display: block;
+        }
+
+        .navbar {
+            background: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .navbar .logo {
+            font-size: 28px;
+            margin: 0;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 25px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #FF8C61);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 107, 53, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--dark);
+            border: 2px solid #E0E0E0;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, var(--primary), #FF8C61);
+            opacity: 0.1;
+            border-radius: 0 20px 0 100%;
+        }
+
+        .stat-number {
+            font-size: 42px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #E0E0E0;
+            padding-bottom: 0;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .quiz-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+        }
+
+        .quiz-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .quiz-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .quiz-header {
+            padding: 24px;
+            background: linear-gradient(135deg, var(--secondary), #0077B6);
+            color: white;
+            position: relative;
+        }
+
+        .quiz-card:nth-child(2) .quiz-header {
+            background: linear-gradient(135deg, var(--primary), #FF8C61);
+        }
+
+        .quiz-card:nth-child(3) .quiz-header {
+            background: linear-gradient(135deg, var(--purple), #C768D8);
+        }
+
+        .quiz-card:nth-child(4) .quiz-header {
+            background: linear-gradient(135deg, var(--success), #34E5B6);
+        }
+
+        .difficulty-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .difficulty-easy {
+            background: var(--easy);
+            color: white;
+        }
+
+        .difficulty-medium {
+            background: var(--medium);
+            color: var(--dark);
+        }
+
+        .difficulty-hard {
+            background: var(--hard);
+            color: white;
+        }
+
+        .quiz-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .quiz-meta {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .quiz-body {
+            padding: 24px;
+        }
+
+        .quiz-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #F0F0F0;
+        }
+
+        .quiz-stat {
+            text-align: center;
+        }
+
+        .quiz-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .quiz-stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        .quiz-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .quiz-actions .btn {
+            flex: 1;
+            font-size: 13px;
+        }
+
+        .badge-section {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 40px;
+        }
+
+        .badge-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .badge-item {
+            text-align: center;
+            padding: 20px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            transition: all 0.3s ease;
+        }
+
+        .badge-item.earned {
+            background: linear-gradient(135deg, #FFD23F, #FFA500);
+            animation: badgePop 0.5s ease-out;
+        }
+
+        @keyframes badgePop {
+            0% {
+                transform: scale(0.8);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .badge-item:hover {
+            transform: scale(1.05);
+        }
+
+        .badge-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .badge-item.earned .badge-icon {
+            filter: drop-shadow(0 4px 10px rgba(255, 210, 63, 0.5));
+        }
+
+        .badge-name {
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--dark);
+        }
+
+        .badge-requirement {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        /* Create Quiz Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .modal-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 32px;
+            color: #999;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .close-modal:hover {
+            color: var(--dark);
+            transform: rotate(90deg);
+        }
+
+        .question-item {
+            background: #F8F9FA;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .question-number {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .difficulty-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        .difficulty-selector .btn {
+            padding: 6px 12px;
+            font-size: 11px;
+        }
+
+        .share-section {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 24px;
+            border-radius: 16px;
+            margin-top: 30px;
+        }
+
+        .share-title {
+            font-weight: 700;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .share-options {
+            display: flex;
+            gap: 10px;
+        }
+
+        .share-options label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .flashcard-container {
+            perspective: 1000px;
+            height: 400px;
+            margin-bottom: 30px;
+        }
+
+        .flashcard {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .flashcard-front,
+        .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            font-size: 28px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .flashcard-front {
+            background: linear-gradient(135deg, var(--secondary), #0077B6);
+            color: white;
+        }
+
+        .flashcard-back {
+            background: linear-gradient(135deg, var(--primary), #FF8C61);
+            color: white;
+            transform: rotateY(180deg);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .quiz-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .navbar {
+                padding: 15px 20px;
+            }
+
+            .badge-grid {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Page -->
+    <div id="loginPage" class="login-container">
+        <div class="login-box">
+            <div class="logo">QuizForge</div>
+            <div class="tagline">Where Learning Meets Achievement</div>
+            
+            <div class="role-selector">
+                <div class="role-btn teacher" onclick="selectRole('teacher')">
+                    <div class="role-icon">👨‍🏫</div>
+                    <div>Teacher</div>
+                </div>
+                <div class="role-btn student active" onclick="selectRole('student')">
+                    <div class="role-icon">👨‍🎓</div>
+                    <div>Student</div>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" placeholder="Enter your username" value="sarah_student">
+            </div>
+
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter your password" value="••••••••">
+            </div>
+
+            <button class="login-btn" onclick="login()">Sign In</button>
+        </div>
+    </div>
+
+    <!-- Student Dashboard -->
+    <div id="studentDashboard" class="dashboard">
+        <nav class="navbar">
+            <div class="logo">QuizForge</div>
+            <div class="nav-actions">
+                <div class="user-badge">
+                    <span>👨‍🎓</span>
+                    <span id="studentName">Sarah Student</span>
+                </div>
+                <button class="btn btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </nav>
+
+        <div class="main-content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">24</div>
+                    <div class="stat-label">Quizzes Completed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">87%</div>
+                    <div class="stat-label">Average Score</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">156</div>
+                    <div class="stat-label">Study Cards Mastered</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">8</div>
+                    <div class="stat-label">Badges Earned</div>
+                </div>
+            </div>
+
+            <!-- Badges Section -->
+            <div class="badge-section">
+                <h2 class="section-title">Your Achievements</h2>
+                <div class="badge-grid">
+                    <div class="badge-item earned">
+                        <div class="badge-icon">🏆</div>
+                        <div class="badge-name">First Quiz</div>
+                        <div class="badge-requirement">Complete 1 quiz</div>
+                    </div>
+                    <div class="badge-item earned">
+                        <div class="badge-icon">🎯</div>
+                        <div class="badge-name">Perfect Score</div>
+                        <div class="badge-requirement">100% on a quiz</div>
+                    </div>
+                    <div class="badge-item earned">
+                        <div class="badge-icon">🔥</div>
+                        <div class="badge-name">5 Day Streak</div>
+                        <div class="badge-requirement">Study 5 days in a row</div>
+                    </div>
+                    <div class="badge-item earned">
+                        <div class="badge-icon">⭐</div>
+                        <div class="badge-name">Star Student</div>
+                        <div class="badge-requirement">Complete 20 quizzes</div>
+                    </div>
+                    <div class="badge-item">
+                        <div class="badge-icon">👑</div>
+                        <div class="badge-name">Quiz Master</div>
+                        <div class="badge-requirement">Complete 50 quizzes</div>
+                    </div>
+                    <div class="badge-item earned">
+                        <div class="badge-icon">💪</div>
+                        <div class="badge-name">Hard Mode</div>
+                        <div class="badge-requirement">Pass a hard quiz</div>
+                    </div>
+                    <div class="badge-item earned">
+                        <div class="badge-icon">📚</div>
+                        <div class="badge-name">Bookworm</div>
+                        <div class="badge-requirement">Study 100 cards</div>
+                    </div>
+                    <div class="badge-item earned">
+                        <div class="badge-icon">🚀</div>
+                        <div class="badge-name">Fast Learner</div>
+                        <div class="badge-requirement">Complete quiz in 5 min</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-header">
+                <h2 class="section-title">My Quizzes</h2>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active">My Quizzes</button>
+                <button class="tab">Shared with Me</button>
+                <button class="tab">Public</button>
+            </div>
+
+            <div class="quiz-grid">
+                <div class="quiz-card">
+                    <div class="quiz-header">
+                        <div>
+                            <div class="difficulty-badge difficulty-medium">Medium</div>
+                            <div class="quiz-title">World History 101</div>
+                            <div class="quiz-meta">Shared by Ms. Johnson</div>
+                        </div>
+                    </div>
+                    <div class="quiz-body">
+                        <div class="quiz-stats">
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">15</div>
+                                <div class="quiz-stat-label">Questions</div>
+                            </div>
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">82%</div>
+                                <div class="quiz-stat-label">Best Score</div>
+                            </div>
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">3</div>
+                                <div class="quiz-stat-label">Attempts</div>
+                            </div>
+                        </div>
+                        <div class="quiz-actions">
+                            <button class="btn btn-primary">Start Quiz</button>
+                            <button class="btn btn-secondary">Study Cards</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quiz-card">
+                    <div class="quiz-header">
+                        <div>
+                            <div class="difficulty-badge difficulty-easy">Easy</div>
+                            <div class="quiz-title">Basic Math Skills</div>
+                            <div class="quiz-meta">Created by you</div>
+                        </div>
+                    </div>
+                    <div class="quiz-body">
+                        <div class="quiz-stats">
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">20</div>
+                                <div class="quiz-stat-label">Questions</div>
+                            </div>
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">95%</div>
+                                <div class="quiz-stat-label">Best Score</div>
+                            </div>
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">5</div>
+                                <div class="quiz-stat-label">Attempts</div>
+                            </div>
+                        </div>
+                        <div class="quiz-actions">
+                            <button class="btn btn-primary">Start Quiz</button>
+                            <button class="btn btn-secondary">Edit</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quiz-card">
+                    <div class="quiz-header">
+                        <div>
+                            <div class="difficulty-badge difficulty-hard">Hard</div>
+                            <div class="quiz-title">Advanced Chemistry</div>
+                            <div class="quiz-meta">Shared by Mr. Smith</div>
+                        </div>
+                    </div>
+                    <div class="quiz-body">
+                        <div class="quiz-stats">
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">25</div>
+                                <div class="quiz-stat-label">Questions</div>
+                            </div>
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">68%</div>
+                                <div class="quiz-stat-label">Best Score</div>
+                            </div>
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">2</div>
+                                <div class="quiz-stat-label">Attempts</div>
+                            </div>
+                        </div>
+                        <div class="quiz-actions">
+                            <button class="btn btn-primary">Start Quiz</button>
+                            <button class="btn btn-secondary">Study Cards</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quiz-card">
+                    <div class="quiz-header">
+                        <div>
+                            <div class="difficulty-badge difficulty-medium">Medium</div>
+                            <div class="quiz-title">Spanish Vocabulary</div>
+                            <div class="quiz-meta">Public Quiz</div>
+                        </div>
+                    </div>
+                    <div class="quiz-body">
+                        <div class="quiz-stats">
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">30</div>
+                                <div class="quiz-stat-label">Questions</div>
+                            </div>
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">-</div>
+                                <div class="quiz-stat-label">Not Attempted</div>
+                            </div>
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">0</div>
+                                <div class="quiz-stat-label">Attempts</div>
+                            </div>
+                        </div>
+                        <div class="quiz-actions">
+                            <button class="btn btn-primary">Start Quiz</button>
+                            <button class="btn btn-secondary">Preview</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Dashboard -->
+    <div id="teacherDashboard" class="dashboard">
+        <nav class="navbar">
+            <div class="logo">QuizForge</div>
+            <div class="nav-actions">
+                <button class="btn btn-primary" onclick="openCreateModal()">+ Create New</button>
+                <div class="user-badge">
+                    <span>👨‍🏫</span>
+                    <span id="teacherName">Mr. Johnson</span>
+                </div>
+                <button class="btn btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </nav>
+
+        <div class="main-content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">12</div>
+                    <div class="stat-label">Active Quizzes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">247</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">1,834</div>
+                    <div class="stat-label">Total Attempts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">78%</div>
+                    <div class="stat-label">Average Score</div>
+                </div>
+            </div>
+
+            <div class="section-header">
+                <h2 class="section-title">My Created Quizzes</h2>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active">All Quizzes</button>
+                <button class="tab">Recently Created</button>
+                <button class="tab">Most Attempted</button>
+            </div>
+
+            <div class="quiz-grid">
+                <div class="quiz-card">
+                    <div class="quiz-header">
+                        <div>
+                            <div class="difficulty-badge difficulty-medium">Medium → Hard</div>
+                            <div class="quiz-title">World History 101</div>
+                            <div class="quiz-meta">Created 2 weeks ago</div>
+                        </div>
+                    </div>
+                    <div class="quiz-body">
+                        <div class="quiz-stats">
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">15</div>
+                                <div class="quiz-stat-label">Questions</div>
+                            </div>
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">89</div>
+                                <div class="quiz-stat-label">Students</div>
+                            </div>
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">267</div>
+                                <div class="quiz-stat-label">Attempts</div>
+                            </div>
+                        </div>
+                        <div class="quiz-actions">
+                            <button class="btn btn-primary">View Results</button>
+                            <button class="btn btn-secondary">Edit</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quiz-card">
+                    <div class="quiz-header">
+                        <div>
+                            <div class="difficulty-badge difficulty-hard">Hard</div>
+                            <div class="quiz-title">Advanced Physics</div>
+                            <div class="quiz-meta">Created 1 month ago</div>
+                        </div>
+                    </div>
+                    <div class="quiz-body">
+                        <div class="quiz-stats">
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">20</div>
+                                <div class="quiz-stat-label">Questions</div>
+                            </div>
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">54</div>
+                                <div class="quiz-stat-label">Students</div>
+                            </div>
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">128</div>
+                                <div class="quiz-stat-label">Attempts</div>
+                            </div>
+                        </div>
+                        <div class="quiz-actions">
+                            <button class="btn btn-primary">View Results</button>
+                            <button class="btn btn-secondary">Edit</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quiz-card">
+                    <div class="quiz-header">
+                        <div>
+                            <div class="difficulty-badge difficulty-easy">Easy</div>
+                            <div class="quiz-title">Introduction to Biology</div>
+                            <div class="quiz-meta">Created yesterday</div>
+                        </div>
+                    </div>
+                    <div class="quiz-body">
+                        <div class="quiz-stats">
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">12</div>
+                                <div class="quiz-stat-label">Questions</div>
+                            </div>
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">32</div>
+                                <div class="quiz-stat-label">Students</div>
+                            </div>
+                            <div class="quiz-stat">
+                                <div class="quiz-stat-value">45</div>
+                                <div class="quiz-stat-label">Attempts</div>
+                            </div>
+                        </div>
+                        <div class="quiz-actions">
+                            <button class="btn btn-primary">View Results</button>
+                            <button class="btn btn-secondary">Edit</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Quiz Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Create New Quiz</h2>
+                <button class="close-modal" onclick="closeCreateModal()">×</button>
+            </div>
+
+            <div class="input-group">
+                <label>Quiz Title</label>
+                <input type="text" placeholder="Enter quiz title" value="World Geography Quiz">
+            </div>
+
+            <div class="input-group">
+                <label>Description</label>
+                <input type="text" placeholder="Brief description" value="Test your knowledge of countries and capitals">
+            </div>
+
+            <div class="input-group">
+                <label>Initial Difficulty Level</label>
+                <div class="difficulty-selector">
+                    <button class="btn btn-secondary">Easy</button>
+                    <button class="btn btn-primary">Medium</button>
+                    <button class="btn btn-secondary">Hard</button>
+                    <button class="btn btn-secondary">Expert</button>
+                </div>
+            </div>
+
+            <h3 style="margin: 30px 0 15px; font-size: 20px;">Questions</h3>
+
+            <div class="question-item">
+                <div class="question-header">
+                    <span class="question-number">Question 1</span>
+                    <div class="difficulty-selector">
+                        <button class="btn btn-primary">Easy</button>
+                        <button class="btn btn-secondary">Med</button>
+                        <button class="btn btn-secondary">Hard</button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Question</label>
+                    <input type="text" placeholder="Enter your question" value="What is the capital of France?">
+                </div>
+                <div class="input-group">
+                    <label>Correct Answer</label>
+                    <input type="text" placeholder="Enter correct answer" value="Paris">
+                </div>
+            </div>
+
+            <div class="question-item">
+                <div class="question-header">
+                    <span class="question-number">Question 2</span>
+                    <div class="difficulty-selector">
+                        <button class="btn btn-secondary">Easy</button>
+                        <button class="btn btn-primary">Med</button>
+                        <button class="btn btn-secondary">Hard</button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Question</label>
+                    <input type="text" placeholder="Enter your question" value="Which country has the most time zones?">
+                </div>
+                <div class="input-group">
+                    <label>Correct Answer</label>
+                    <input type="text" placeholder="Enter correct answer" value="France">
+                </div>
+            </div>
+
+            <button class="btn btn-secondary" style="width: 100%; margin: 20px 0;">+ Add Another Question</button>
+
+            <div class="share-section">
+                <div class="share-title">Sharing Options</div>
+                <div class="share-options">
+                    <label>
+                        <input type="checkbox" checked>
+                        Share with my students
+                    </label>
+                    <label>
+                        <input type="checkbox">
+                        Make public
+                    </label>
+                    <label>
+                        <input type="checkbox" checked>
+                        Enable adaptive difficulty
+                    </label>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 30px;">
+                <button class="btn btn-primary" style="flex: 1;">Create Quiz</button>
+                <button class="btn btn-secondary" onclick="closeCreateModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRole = 'student';
+
+        function selectRole(role) {
+            currentRole = role;
+            document.querySelectorAll('.role-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.closest('.role-btn').classList.add('active');
+        }
+
+        function login() {
+            document.getElementById('loginPage').style.display = 'none';
+            if (currentRole === 'student') {
+                document.getElementById('studentDashboard').classList.add('active');
+            } else {
+                document.getElementById('teacherDashboard').classList.add('active');
+            }
+        }
+
+        function logout() {
+            document.getElementById('studentDashboard').classList.remove('active');
+            document.getElementById('teacherDashboard').classList.remove('active');
+            document.getElementById('loginPage').style.display = 'flex';
+        }
+
+        function openCreateModal() {
+            document.getElementById('createModal').classList.add('active');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.remove('active');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('createModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeCreateModal();
+            }
+        });
+
+        // Tab functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                this.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

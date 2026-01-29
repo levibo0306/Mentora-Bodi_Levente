@@ -1,0 +1,21 @@
+{
+  "id": "INT-005",
+  "date": "2025-10-14",
+  "method": "személyes interjú",
+  "participant": {
+    "pseudonym": "Réka",
+    "segment": "Harmadéves bölcsész hallgató"
+  },
+  "consent": true,
+  "insights": [
+    "Sok jegyzetet ír kézzel, de utólag nehéz visszakeresni.",
+    "A vizsgákra definíciókat és évszámokat tanul, ami unalmas és monoton."
+  ],
+  "pain_points": [
+    "A Quizlet-ben a kérdések ismétlődnek, és nem mérik a fejlődést.",
+    "A hosszú anyag miatt nem tudja, hol tart a felkészülésben."
+  ],
+  "quotes": [
+    "\"Ha lenne valami, ami jelezné, hogy mely témákból vagyok gyenge, az rengeteget segítene.\""
+  ]
+}

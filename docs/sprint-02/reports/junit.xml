@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="sprint2-tests" tests="5" failures="0" errors="0" time="0.00903775">
+    <testsuite name="sprints/02/tests/unit/error_handler.spec.ts" timestamp="2025-12-01T18:23:35.380Z" hostname="192.168.1.74" tests="1" failures="0" errors="0" skipped="0" time="0.00155875">
+        <testcase classname="sprints/02/tests/unit/error_handler.spec.ts" name="error handler &gt; returns a readable error message" time="0.000709209">
+        </testcase>
+    </testsuite>
+    <testsuite name="sprints/02/tests/unit/form_validation.spec.ts" timestamp="2025-12-01T18:23:35.380Z" hostname="192.168.1.74" tests="1" failures="0" errors="0" skipped="0" time="0.001683417">
+        <testcase classname="sprints/02/tests/unit/form_validation.spec.ts" name="form validation &gt; invalid if title missing" time="0.000850958">
+        </testcase>
+    </testsuite>
+    <testsuite name="sprints/02/tests/unit/list_state.spec.ts" timestamp="2025-12-01T18:23:35.380Z" hostname="192.168.1.74" tests="1" failures="0" errors="0" skipped="0" time="0.00150175">
+        <testcase classname="sprints/02/tests/unit/list_state.spec.ts" name="list state &gt; empty array triggers empty UI state" time="0.000706292">
+        </testcase>
+    </testsuite>
+    <testsuite name="sprints/02/tests/unit/quiz_logic.spec.ts" timestamp="2025-12-01T18:23:35.381Z" hostname="192.168.1.74" tests="1" failures="0" errors="0" skipped="0" time="0.00240675">
+        <testcase classname="sprints/02/tests/unit/quiz_logic.spec.ts" name="quizLogic &gt; returns error when title is empty" time="0.000801833">
+        </testcase>
+    </testsuite>
+    <testsuite name="sprints/02/tests/unit/utils.spec.ts" timestamp="2025-12-01T18:23:35.381Z" hostname="192.168.1.74" tests="1" failures="0" errors="0" skipped="0" time="0.001887083">
+        <testcase classname="sprints/02/tests/unit/utils.spec.ts" name="utils &gt; should format title" time="0.000745417">
+        </testcase>
+    </testsuite>
+</testsuites>

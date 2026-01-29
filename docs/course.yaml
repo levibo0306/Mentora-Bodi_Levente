@@ -1,0 +1,8 @@
+student:
+  name: "Bódi Levente"
+  id: "O75OW8"
+project:
+  title: "Mentora – interaktív tanuló és kvíz platform"
+  product_ml_features: true
+ai:
+  log_min_entries_per_sprint: 3

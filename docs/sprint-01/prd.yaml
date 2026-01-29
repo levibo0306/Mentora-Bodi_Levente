@@ -1,0 +1,54 @@
+meta:
+  version: "0.1"
+  last_updated: "2025-10-16"
+problem:
+  statement: "A magyar egyetemi hallgatók számára a vizsgafelkészülés digitális eszközei széttagoltak és gyakran passzív tanulási élményt nyújtanak. A jelenlegi kvíz- és tanulókártya-platformok (pl. Kahoot, Quizlet) nem biztosítanak személyre szabott, visszajelzés-alapú fejlődést, így a hallgatók motivációja és hatékonysága csökken."
+target_audience:
+  personas:
+    - name: "Bea, a nappali tagozatos hallgató"
+      segment: "Harmadéves joghallgató akinek több könyvet is meg kell tanulnia egy viszgához."
+      needs:
+        - "A tanulási folyamat felgyorsítása"
+        - "Kérdések és kvízek, amelyek a gyenge pontokra koncentrálnak"
+        - "Előrehaladás nyomon követése"
+        - "Offline hozzáférés a jegyzetekhez"
+    - name: "Márton, az oktató"
+      segment: "Középiskolai tanár, aki digitális eszközökkel szeretné növelni a diákok aktivitását és nyomon követni a fejlődésüket."
+      needs:
+        - "Gyors és egyszerű kvízkészítési lehetőség"
+        - "Átlátható statisztikák és valós idejű viszajelzések"
+value_proposition:
+  concise: "A Mentora egy interaktív, személyre szabott tanulás- és oktatástámogató platform, amely ötvözi a kvízjátékok motiváló élményét a valós idejű visszajelzésekkel és elemzésekkel. A rendszer segíti a hallgatókat a hatékonyabb vizsgafelkészülésben, miközben az oktatók számára lehetőséget biztosít a tudásszint nyomon követésére és az aktív részvétel ösztönzésére."
+  differentiators:
+    - "Tanári felület valós idejű eredménykövetéssel és statisztikai elemzéssel"
+    - "Motivációs rendszer a hallgatók számára (szintek, jelvények, heti célok)"
+    - "Tanár–diák interakciós tér, ahol a visszajelzések közvetlenül adhatók"
+    - "AI-alapú kérdésgenerálás a tanárok által feltöltött tananyagokból"
+    - "Adaptív nehézségi szint, amely a hallgató válaszaihoz igazodik"
+scope:
+  in:
+    - "AI-alapú kérdés- és tesztgenerálás oktatói anyagokból"
+    - "Felhasználói regisztráció és bejelentkezés hallgatói és oktatói szerepkörrel"
+    - "Valós idejű kvíz- és pontozási rendszer"
+    - "Tanári statisztikai felület a kurzusok és hallgatói teljesítmény követéséhez"
+    - "adaptív nehézségi szintek"
+  out:
+    - "Offline használat internetkapcsolat nélkül"
+    - "Automatikus esszéértékelés vagy hosszú szöveges beadandók"
+    - "Többnyelvű felhasználói felület az első verzióban"
+success_metrics:
+  - "A hallgatók átlagos vizsgaeredménye legalább 20%-kal javul a korábbi félévhez képest."
+  - "Legalább 30 aktív hallgatói és 3 aktív oktatói fiók az első tesztidőszakban."
+  - "A rendszer napi átlagos használati ideje eléri a 15 percet hallgatónként."
+risks:
+  - "Adatvédelmi elvárások az egyetemi szabályzatok miatt"
+  - "A hallgatók bizalmatlanok lehetnek az AI-alapú kérdésgenerálással szemben."
+  - "A rendszer hosszabb távon motivációs torzítást okozhat"
+first_tech_decision_ref: "sprints/01/architecture/adr/0001-first-tech-choice.md"
+research_summary:
+  insights:
+    - "A hallgatók többsége elsősorban passzív tanulási módszereket alkalmaz ami nem biztosít visszajelzést."
+    - "Az oktatók gyakran manuálisan készítik el a kvízkérdéseket, ami időigényes és nehezen karbantartható."
+  pain_points:
+    - "A jelenlegi eszközök nem alkalmazkodnak a hallgatók egyéni tudásszintjéhez."
+    - "A hallgatók nem kapnak személyre szabott visszajelzést arról, mely témákból gyengébbek."

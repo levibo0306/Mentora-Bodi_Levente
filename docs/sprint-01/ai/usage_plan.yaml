@@ -1,0 +1,18 @@
+goals:
+  - "AI-eszközök használata a Mentora tanulás- és oktatástámogató platform tervezési fázisában."
+  - "Kérdésgenerálási és adaptív nehézségmodellek kutatása és dokumentálása."
+  - "A versenytárs kvízplatformok (Kahoot, Quizlet, Learnr) funkcióinak elemzése és összehasonlítása."
+operational_cadence:
+  check_in: "Heti két alkalommal értékelem az MI-eszközök által adott javaslatokat."
+  review_partner: "A konzulenssel sprintenként egyszer átbeszélem az MI-eszközök által generált anyagokat."
+guardrails:
+   - "Nem továbbítok személyes adatot vagy hallgatói információt MI-eszközökbe."
+   - "Minden generált szöveget manuálisan ellenőrzök, mielőtt a projektbe integrálom."
+   - "A hallgatói vagy oktatói visszajelzéseket anonimizálom az elemzés során."
+tools:
+  - name: "ChatGPT"
+    use_cases:
+      - "PRD és kutatási dokumentumok strukturálása"
+      - "AI-alapú kérdésgenerálási koncepciók kidolgozása"
+      - "Interjúkérdések és versenytárselemzések támogatása"
+  

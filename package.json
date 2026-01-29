@@ -1,0 +1,15 @@
+{
+  "name": "mentora-prototype",
+  "private": true,
+  "workspaces": [
+    "apps/frontend",
+    "apps/backend"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspaces",
+    "dev:frontend": "npm --workspace apps/frontend run dev",
+    "dev:backend": "npm --workspace apps/backend run dev",
+    "test:frontend": "npm --workspace apps/frontend run test",
+    "test:frontend:ci": "npm --workspace apps/frontend run test:ci"
+  }
+}

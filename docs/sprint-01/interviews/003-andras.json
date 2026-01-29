@@ -1,0 +1,23 @@
+{
+  "id": "INT-003",
+  "date": "2025-10-14",
+  "method": "online interjú",
+  "participant": {
+    "pseudonym": "András",
+    "segment": "Elsőéves mérnökinformatikus hallgató"
+  },
+  "consent": true,
+  "insights": [
+    "Az online kvízek segítenek a vizsgára készülni, de gyakran túl felszínesek.",
+    "Jobban szeret csoportosan tanulni, mert ott több visszajelzést kap.",
+    "A hosszú elméleti anyagokat nehezen köti össze gyakorlati példákkal."
+  ],
+  "pain_points": [
+    "A legtöbb app nem magyarázza el, miért rossz egy válasz.",
+    "Nincs lehetőség a téves válaszok külön gyakorlására.",
+    "A motivációja csökken, ha nem látja a fejlődést."
+  ],
+  "quotes": [
+    "\"Ha csak piros X-et látok, nem tudom, mit rontottam el – így nem tanulok belőle.\""
+  ]
+}

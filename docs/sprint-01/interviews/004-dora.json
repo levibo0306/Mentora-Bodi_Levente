@@ -1,0 +1,21 @@
+{
+  "id": "INT-004",
+  "date": "2025-10-15",
+  "method": "online interjú",
+  "participant": {
+    "pseudonym": "Dóra",
+    "segment": "Negyedéves gazdasági informatikus hallgató"
+  },
+  "consent": true,
+  "insights": [
+    "Akkor marad motivált, ha látja, mennyit fejlődött egy-egy témában.",
+    "Jobban szeret rövid, gyors kérdéssorokat, mint hosszú teszteket."
+  ],
+  "pain_points": [
+    "A kérdések nehézsége kiszámíthatatlan: vagy túl könnyű, vagy túl nehéz.",
+    "Nehéz nyomon követni, mennyi időt tölt tanulással naponta."
+  ],
+  "quotes": [
+    "\"Tök jó lenne, ha egy app megmutatná, hogy ma tényleg előrébb jutottam, nem csak kitöltöttem pár kvízt.\""
+  ]
+}

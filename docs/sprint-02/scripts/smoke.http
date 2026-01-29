@@ -1,0 +1,19 @@
+@baseUrl = http://localhost:4173
+
+
+GET {{baseUrl}}/
+
+> {%
+  const expectedSnippet = '<div id="root"></div>';
+
+  client.test("Status is 200", () => {
+    client.assert(response.status === 200, "Status is not 200");
+  });
+
+  client.test("Body contains root div", () => {
+    client.assert(
+      response.body.includes(expectedSnippet),
+      `Response does not contain '${expectedSnippet}'`
+    );
+  });
+%}
