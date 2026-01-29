@@ -1,42 +1,28 @@
+import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { z } from "zod";
+import { isTokenRevoked } from "../revokedTokens";
 
-const JwtPayloadSchema = z.object({
-  sub: z.string(), // user id (uuid)
-  email: z.string().email(),
-  role: z.enum(["teacher", "student"]),
-});
+export type JwtPayload = { sub: string; email: string; role: "teacher" | "student" };
 
-export type AuthUser = z.infer<typeof JwtPayloadSchema>;
-
-function getSecret() {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error("JWT_SECRET is missing");
-  return secret;
+// EZ HIÁNYZOTT: Token létrehozása (aláírása)
+export function signToken(payload: JwtPayload) {
+  // 24 órás lejárattal készítjük a tokent
+  return jwt.sign(payload, process.env.JWT_SECRET || "titkos-kulcs", { expiresIn: "24h" });
 }
 
-export function signToken(user: AuthUser) {
-  return jwt.sign(user, getSecret(), { expiresIn: "7d" });
-}
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const header = req.headers.authorization ?? "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
 
-export function requireAuth(req: any, res: any, next: any) {
+  if (isTokenRevoked(token)) return res.status(401).json({ error: "Unauthorized" });
+
   try {
-    const h = req.headers.authorization ?? "";
-    const token = typeof h === "string" && h.startsWith("Bearer ") ? h.slice(7) : null;
-    if (!token) return res.status(401).json({ error: "Unauthorized" });
-
-    const decoded = jwt.verify(token, getSecret());
-    req.user = JwtPayloadSchema.parse(decoded);
-    return next();
+    const payload = jwt.verify(token, process.env.JWT_SECRET || "titkos-kulcs") as JwtPayload;
+    (req as any).auth = payload;
+    (req as any).token = token;
+    next();
   } catch {
     return res.status(401).json({ error: "Unauthorized" });
   }
-}
-
-export function requireRole(role: "teacher" | "student") {
-  return (req: any, res: any, next: any) => {
-    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-    if (req.user.role !== role) return res.status(403).json({ error: "Forbidden" });
-    return next();
-  };
 }

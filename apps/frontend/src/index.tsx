@@ -1,158 +1,105 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import type { Quiz } from "./core/quizLogic";
-import { fetchQuizzes, createQuiz, deleteQuiz, shareQuiz } from "./api/quizzes";
-import { useAuth } from "./context/AuthContext";
+import React, { useState } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { Navbar } from "./ui/Navbar";
 import { Login } from "./pages/Login";
 import { QuizList } from "./ui/QuizList";
 import { CreateQuizForm } from "./ui/CreateQuizForm";
-import { ErrorState } from "./ui/ErrorState";
 import { MetricsPanel } from "./ui/MetricsPanel";
+import { useAuth } from "./context/AuthContext";
 
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+// Ez a segéd komponens védi az útvonalakat
+function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return children;
-};
+}
 
-export const App: React.FC = () => {
-  const nav = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth(); // ✅ EZ HIÁNYZOTT
-
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+export default function App() {
+  const { user } = useAuth();
+  
+  // ÁLLAPOTOK A DASHBOARDHOZ
+  // showModal: látható-e a felugró ablak?
+  const [showModal, setShowModal] = useState(false);
+  // refreshKey: ha ez változik, a lista újratölti magát
+  const [refreshKey, setRefreshKey] = useState(0);
   const [showMetrics, setShowMetrics] = useState(false);
 
-  const load = async () => {
-    try {
-      setError(null);
-      setLoading(true);
-      const data = await fetchQuizzes();
-      setQuizzes(data);
-    } catch (e: any) {
-      setError(e?.message ?? "Hiba történt");
-    } finally {
-      setLoading(false);
-    }
+  // Ez fut le, ha sikeresen létrehoztunk egy kvízt
+  const handleQuizCreated = () => {
+    setShowModal(false);       // Bezárjuk az ablakot
+    setRefreshKey(prev => prev + 1); // Frissítjük a listát
   };
 
-  // ✅ 1) Csak akkor töltsük be, ha authenticated
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
+  // Dashboard tartalma (most már inline komponensként kezeljük a tisztaság kedvéért)
+  const Dashboard = (
+    <div className="dashboard active"> {/* A 'active' class a test.html stílusa miatt kell */}
+      
+      {/* A tartalom konténere - test.html 'main-content' */}
+      <div className="main-content">
+        
+        {/* STATISZTIKÁK (Opcionális, a test.html alapján) */}
+        <div className="stats-grid">
+           <div className="stat-card">
+              <div className="stat-number">12</div>
+              <div className="stat-label">Aktív Kvízek</div>
+           </div>
+           <div className="stat-card">
+              <div className="stat-number">87%</div>
+              <div className="stat-label">Átlagos eredmény</div>
+           </div>
+        </div>
 
-  // ✅ 2) Kijelentkezéskor tisztítás
-  useEffect(() => {
-    if (isAuthenticated) return;
-    setQuizzes([]);
-    setError(null);
-    setLoading(false);
-  }, [isAuthenticated]);
+        {/* Címsor és Gomb */}
+        <div className="section-header">
+            <h2 className="section-title">Saját Projektek</h2>
+            {/* Itt nyitjuk meg a modalt navigáció helyett */}
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+              + Új Kvíz
+            </button>
+        </div>
 
-  // ✅ 3) Ha 401/unauthorized, dobjuk vissza loginra + logout (hogy token is törlődjön)
-  useEffect(() => {
-    if (!error) return;
-    if (error.toLowerCase().includes("unauthorized")) {
-      logout?.();
-      nav("/login");
-    }
-  }, [error, nav, logout]);
+        {/* LISTA */}
+        {/* A key={refreshKey} miatt újratöltődik, ha a key változik */}
+        <QuizList key={refreshKey} />
 
-  const handleCreate = async (title: string) => {
-    try {
-      setError(null);
-      await createQuiz(title);
-      await load();
-      setSuccessMessage("Sikeres mentés");
-      setTimeout(() => setSuccessMessage(null), 2500);
-    } catch (e: any) {
-      setError(e?.message ?? "Hiba történt");
-    }
-  };
+        {/* METRIKÁK TOGGLE (Meglévő funkciód) */}
+        <div style={{ marginTop: "2rem" }}>
+          <button className="btn btn-secondary" onClick={() => setShowMetrics((v) => !v)}>
+            {showMetrics ? "Metrikák elrejtése" : "Metrikák megjelenítése"}
+          </button>
+          {showMetrics && <MetricsPanel />}
+        </div>
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Biztos törlöd?")) return;
-    try {
-      setError(null);
-      await deleteQuiz(id);
-      await load();
-    } catch (e: any) {
-      setError(e?.message ?? "Törlés sikertelen");
-    }
-  };
+      </div>
 
-  const handleShare = async (id: string) => {
-    try {
-      setError(null);
-      const { token } = await shareQuiz(id);
-      const url = `${window.location.origin}/share/${token}`;
-      await navigator.clipboard.writeText(url).catch(() => {});
-      alert(`Share link: ${url}`);
-    } catch (e: any) {
-      setError(e?.message ?? "Megosztás sikertelen");
-    }
-  };
-
- const canCreate = !!user;
-
- const Dashboard = (
-  <div>
-    {loading && <p>Betöltés…</p>}
-    {error && <ErrorState message={error} onRetry={load} />}
-
-    {!loading && !error && (
-      <>
-        {successMessage && <p>{successMessage}</p>}
-
-        {/* ide jön majd a create gomb */}
-       <QuizList
-  quizzes={quizzes}
-  onCreateClick={() => nav("/create")}
-  onDeleteClick={handleDelete}
-  onShareClick={handleShare}
-/>
-
-        <button type="button" onClick={() => setShowMetrics((v) => !v)}>
-          {showMetrics ? "Metrikák elrejtése" : "Metrikák megjelenítése"}
-        </button>
-        {showMetrics && <MetricsPanel />}
-      </>
-    )}
-  </div>
-);
+      {/* MODAL: Csak akkor jelenítjük meg, ha a showModal igaz */}
+      {showModal && (
+        <CreateQuizForm 
+          onSuccess={handleQuizCreated} 
+          onCancel={() => setShowModal(false)} 
+        />
+      )}
+    </div>
+  );
 
   return (
     <div>
-      <Navbar />
+      {/* A Navbar mindig látszik, ha be vagyunk jelentkezve (opcionális logika) */}
+      {user && <Navbar />}
 
       <Routes>
         <Route path="/login" element={<Login />} />
-
+        
+        {/* A főoldal a Dashboard */}
         <Route
           path="/"
           element={<ProtectedRoute>{Dashboard}</ProtectedRoute>}
         />
-
-        <Route
-          path="/create"
-          element={
-            <ProtectedRoute>
-              <div style={{ maxWidth: 600, margin: "0 auto" }}>
-                {canCreate && <CreateQuizForm onSubmit={handleCreate} />}
-              </div>
-            </ProtectedRoute>
-          }
-        />
+        
+        {/* A /create útvonalat töröltük, mert most már Modal-t használunk! */}
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );
-};
-
-export default App;
+}

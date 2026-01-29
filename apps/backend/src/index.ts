@@ -8,6 +8,7 @@ import { authRouter } from "./routes/auth";
 import { quizzesRouter } from "./routes/quizzes";
 import { shareRouter } from "./routes/share";
 
+
 const app = express();
 
 app.use(

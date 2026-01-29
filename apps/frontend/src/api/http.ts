@@ -1,6 +1,6 @@
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
-export async function api(path: string, init: RequestInit = {}) {
+export async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
 
   if (!headers.has("Content-Type")) {
@@ -24,6 +24,6 @@ export async function api(path: string, init: RequestInit = {}) {
   }
 
   const ct = res.headers.get("content-type") ?? "";
-  if (ct.includes("application/json")) return res.json();
-  return res.text() as any;
+  if (ct.includes("application/json")) return (await res.json()) as T;
+  return (await res.text()) as any as T;
 }

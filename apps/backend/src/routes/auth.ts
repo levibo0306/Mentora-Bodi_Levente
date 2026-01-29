@@ -2,10 +2,13 @@ import { Router } from "express";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { pool } from "../db";
-import { signToken } from "../middleware/auth";
+import { signToken, requireAuth } from "../middleware/auth";
+import { revokeToken } from "../revokedTokens";
 
+// 1. Router példány létrehozása (csak egyszer!)
 export const authRouter = Router();
 
+// --- REGISTER ---
 const RegisterBody = z.object({
   email: z.string().email(),
   password: z.string().min(6).max(72),
@@ -26,6 +29,7 @@ authRouter.post("/register", async (req, res) => {
   res.status(201).json({ token, user });
 });
 
+// --- LOGIN ---
 const LoginBody = z.object({
   email: z.string().email(),
   password: z.string().min(1),
@@ -47,3 +51,20 @@ authRouter.post("/login", async (req, res) => {
   const token = signToken({ sub: u.id, email: u.email, role: u.role });
   res.json({ token, user: { id: u.id, email: u.email, role: u.role } });
 });
+
+// --- ME (User info) ---
+authRouter.get("/me", requireAuth, async (req, res) => {
+  const a = (req as any).auth;
+  // Ha a tokent fogadjuk el hitelesnek (nem kérdezzük le újra a DB-t):
+  return res.json({ user: { id: a.sub, email: a.email, role: a.role } });
+});
+
+// --- LOGOUT ---
+authRouter.post("/logout", requireAuth, async (req, res) => {
+  const token = (req as any).token as string;
+  revokeToken(token);
+  return res.status(204).send();
+});
+
+// 2. FONTOS: A végén a router példányt exportáljuk defaultként
+export default authRouter;

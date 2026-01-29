@@ -13,9 +13,6 @@ export const MetricsPanel: React.FC = () => {
         <li>Létrehozott kvízek: {m.quizzesCreated}</li>
         {m.lastErrorAt && <li>Utolsó hiba ideje: {m.lastErrorAt}</li>}
       </ul>
-      <p style={{ fontSize: 12, opacity: 0.8 }}>
-        Megjegyzés: ez prototípus, a metrikák böngésző-memóriában élnek.
-      </p>
     </section>
   );
 };

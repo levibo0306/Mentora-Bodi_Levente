@@ -8,15 +8,15 @@ export type AuthUser = {
 };
 
 export function registerApi(email: string, password: string, role: UserRole) {
-  return api("/api/auth/register", {
+  return api<{ token: string; user: AuthUser }>("/api/auth/register", {
     method: "POST",
     body: JSON.stringify({ email, password, role }),
-  }) as Promise<{ token: string; user: AuthUser }>;
+  });
 }
 
 export function loginApi(email: string, password: string) {
-  return api("/api/auth/login", {
+  return api<{ token: string; user: AuthUser }>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
-  }) as Promise<{ token: string; user: AuthUser }>;
+  });
 }

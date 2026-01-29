@@ -1,34 +1,47 @@
-import React from "react";
-import type { Quiz } from "../core/quizLogic";
-import { useAuth } from "../context/AuthContext";
-import { EmptyState } from "./EmptyState";
+import { useEffect, useState } from "react";
+import { api } from "../api/http";
 
-type Props = {
-  quizzes: Quiz[];
-  onCreateClick?: () => void;
-  onDeleteClick?: (id: string) => void;
-  onShareClick?: (id: string) => void;
+type Quiz = {
+  id: string;
+  title: string;
+  description: string;
+  questionCount?: number;
 };
 
-export const QuizList: React.FC<Props> = ({ quizzes, onCreateClick, onDeleteClick, onShareClick }) => {
-  const { user } = useAuth();
+export function QuizList() {
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  if (!quizzes || quizzes.length === 0) return <EmptyState onCreateClick={onCreateClick} />;
+  useEffect(() => {
+    // Adatok lekérése
+    api<Quiz[]>("/api/quizzes")
+      .then((data) => {
+        setQuizzes(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError("Nem sikerült betölteni a kvízeket.");
+        setLoading(false);
+      });
+  }, []); // Az üres array miatt csak mount-kor fut, DE mivel a szülőben változtatjuk a `key`-t, az egész komponens újratöltődik!
+
+  if (loading) return <div style={{ color: "white" }}>Betöltés...</div>;
+  if (error) return <div style={{ color: "var(--danger)" }}>{error}</div>;
+  if (quizzes.length === 0) return <div style={{ color: "white", opacity: 0.8 }}>Még nincsenek kvízeid. Hozz létre egyet!</div>;
 
   return (
-    <div className="quiz-grid">
-      {quizzes.map((q) => (
-        <div key={q.id} className="quiz-card">
-          <div className="quiz-title">{q.title}</div>
-
-          {user?.role === "teacher" && (
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <button type="button" onClick={() => onShareClick?.(q.id)}>🔗 Share</button>
-              <button type="button" onClick={() => onDeleteClick?.(q.id)}>🗑 Delete</button>
-            </div>
-          )}
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1.5rem" }}>
+      {quizzes.map((quiz) => (
+        <div key={quiz.id} className="card" style={{ display: "flex", flexDirection: "column" }}>
+          <h3 style={{ color: "var(--secondary)", marginBottom: "0.5rem" }}>{quiz.title}</h3>
+          <p style={{ color: "#666", flexGrow: 1 }}>{quiz.description}</p>
+          <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #eee" }}>
+            <button className="btn-secondary" style={{ width: "100%" }}>Megnyitás</button>
+          </div>
         </div>
       ))}
     </div>
   );
-};
+}
