@@ -1,0 +1,91 @@
+flowchart TD
+  S01["▶ S01 Login / Regisztráció 🔒"]
+  S02["▶ S02 Tanári dashboard"]
+  S03["▶ S03 Diák dashboard - Saját kvízek"]
+  S04["S04 Diák dashboard - Velem megosztva"]
+  S05["S05 Diák dashboard - Kvíz hozzáadás"]
+  S06["S06 Diák dashboard - Témák"]
+  S07{{"♦ S07 Kvíz létrehozása / szerkesztése"}}
+  S08{{"♦ S08 Kvíz megosztás"}}
+  S09{{"♦ S09 Téma megosztás"}}
+  S10["S10 Kvíz kitöltés"]
+  S11["S11 Kvíz eredmény"]
+  S12["▶ S12 Nyilvános megosztott kvíz 🔒"]
+  S13["S13 Nyilvános megosztott kvíz eredmény 🔒"]
+  S14["S14 Eredmények / analitika"]
+  S15["S15 Küldetések"]
+  S16["S16 Profil"]
+  S17["S17 Téma részletei"]
+
+  S01 -->|"Bejelentkezés / Regisztráció sikeres"| S02
+  S01 -->|"Bejelentkezés / Regisztráció sikeres"| S03
+
+  S02 -->|"Navbar: Profil"| S16
+  S02 -->|"Teacher HQ: Eredmények"| S14
+  S02 -->|"+ Új kvíz"| S07
+  S02 -->|"Kvíz kártya: Megosztás"| S08
+  S02 -->|"Témák panel: Megosztás"| S09
+  S02 -->|"Kvíz kártya: Indítás"| S10
+  S02 -->|"Témák panel: Megnyitás"| S17
+
+  S03 -->|"Tab: Velem megosztva"| S04
+  S03 -->|"Tab: Hozzáadás"| S05
+  S03 -->|"Tab: Témák"| S06
+  S03 -->|"Navbar: Küldetések"| S15
+  S03 -->|"Navbar: Profil"| S16
+  S03 -->|"+ Új kvíz"| S07
+  S03 -->|"Kvíz kártya: Megosztás"| S08
+  S03 -->|"Kvíz kártya: Indítás"| S10
+
+  S04 -->|"Tab: Saját kvízek"| S03
+  S04 -->|"Tab: Hozzáadás"| S05
+  S04 -->|"Tab: Témák"| S06
+  S04 -->|"Kvíz megnyitása"| S12
+  S04 -->|"Továbbosztás"| S08
+
+  S05 -->|"Tab: Saját kvízek"| S03
+  S05 -->|"Tab: Velem megosztva"| S04
+  S05 -->|"Tab: Témák"| S06
+  S05 -->|"Sikeres hozzáadás után"| S04
+
+  S06 -->|"Tab: Saját kvízek"| S03
+  S06 -->|"Tab: Velem megosztva"| S04
+  S06 -->|"Tab: Hozzáadás"| S05
+  S06 -->|"Téma megnyitása"| S17
+
+  S07 -->|"Mentés sikeres / Bezárás"| S02
+  S07 -->|"Mentés sikeres / Bezárás"| S03
+
+  S08 -->|"Bezárás"| S02
+  S08 -->|"Bezárás"| S03
+  S08 -->|"Bezárás"| S04
+
+  S09 -->|"Bezárás"| S02
+
+  S10 -->|"Befejezés"| S11
+  S10 -->|"Kilépés"| S02
+  S10 -->|"Kilépés"| S03
+
+  S11 -->|"Vissza a Dashboardra"| S02
+  S11 -->|"Vissza a Dashboardra"| S03
+  S11 -->|"Újrapróbálom"| S10
+
+  S12 -->|"Következő / Befejezés"| S13
+  S12 -->|"Vissza"| S03
+  S12 -->|"Vissza"| S04
+
+  S13 -->|"Újrapróbálom"| S12
+  S13 -->|"Vissza"| S03
+  S13 -->|"Vissza"| S04
+
+  S14 -->|"Navbar: Profil"| S16
+  S14 -->|"Navigáció vissza"| S02
+
+  S15 -->|"Navbar: Profil"| S16
+  S15 -->|"Navigáció vissza"| S03
+
+  S16 -->|"Navigáció vissza"| S02
+  S16 -->|"Navigáció vissza"| S03
+
+  S17 -->|"Vissza"| S02
+  S17 -->|"Vissza"| S06
