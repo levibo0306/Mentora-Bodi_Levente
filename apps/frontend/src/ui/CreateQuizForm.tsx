@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { createQuiz, createQuestion, updateQuestion, updateQuiz, getQuiz, CreateQuestionDto } from '../api/quizzes';
+import React, { useState, useEffect, useRef } from 'react';
+import { createQuiz, createQuestion, updateQuestion, updateQuiz, getQuiz, generateQuestionsAI, CreateQuestionDto } from '../api/quizzes';
 import { getTopics, Topic } from '../api/topics';
 import { api } from '../api/http';
 
@@ -26,7 +26,10 @@ export const CreateQuizForm = ({ quizId, onSuccess }: Props) => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const [aiTopic, setAiTopic] = useState('');
+  const [aiCount, setAiCount] = useState(5);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationElapsed, setGenerationElapsed] = useState(0);
+  const generationController = useRef<AbortController | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -68,6 +71,18 @@ export const CreateQuizForm = ({ quizId, onSuccess }: Props) => {
     };
     loadTopics();
   }, []);
+
+  useEffect(() => {
+    if (!isGenerating) return;
+    const startedAt = Date.now();
+    setGenerationElapsed(0);
+    const timer = window.setInterval(() => {
+      setGenerationElapsed(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [isGenerating]);
+
+  useEffect(() => () => generationController.current?.abort(), []);
 
   const getQuestionFromInput = (): CreateQuestionDto | null => {
     if (!currentPrompt.trim()) return null;
@@ -121,6 +136,34 @@ export const CreateQuizForm = ({ quizId, onSuccess }: Props) => {
     setEditingIndex(null);
     setError(null);
   };
+
+  const handleGenerateQuestions = async () => {
+    if (aiTopic.trim().length < 50) {
+      setError("A tananyag legyen legalább 50 karakter hosszú.");
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+    const controller = new AbortController();
+    generationController.current = controller;
+    try {
+      const generated = await generateQuestionsAI(aiTopic.trim(), aiCount, controller.signal);
+      setQuestions((current) => [...current, ...generated]);
+      setAiTopic("");
+    } catch (err: any) {
+      setError(err?.name === "AbortError" ? "A generálást megszakítottad." : err.message || "Nem sikerült kérdéseket generálni.");
+    } finally {
+      generationController.current = null;
+      setIsGenerating(false);
+    }
+  };
+
+  const generationStatus = generationElapsed < 15
+    ? "A helyi modell betöltése és a tananyag feldolgozása..."
+    : generationElapsed < 45
+      ? "A kérdések összeállítása folyamatban van..."
+      : "A helyi modell még dolgozik. Az első generálás akár 1–2 percig is tarthat.";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,6 +256,53 @@ export const CreateQuizForm = ({ quizId, onSuccess }: Props) => {
 
       {step === 2 && (
         <>
+          <div className="card section ai-question-builder">
+            <div className="ai-builder-heading">
+              <div>
+                <span className="eyebrow">Helyi AI · Qwen3</span>
+                <h3>Kérdések tananyagból</h3>
+                <p>Illeszd be a forrásszöveget. A kérdések először a szerkeszthető listába kerülnek.</p>
+              </div>
+              <label>
+                Kérdések száma
+                <select value={aiCount} onChange={(event) => setAiCount(Number(event.target.value))}>
+                  {[3, 5, 8, 10].map((count) => <option key={count} value={count}>{count}</option>)}
+                </select>
+              </label>
+            </div>
+            <textarea
+              value={aiTopic}
+              onChange={(event) => setAiTopic(event.target.value)}
+              placeholder="Másold ide a jegyzetet vagy tananyagot, amelyből a kérdések készüljenek..."
+              rows={7}
+              maxLength={7000}
+            />
+            <div className="ai-builder-actions">
+              <small>{aiTopic.length.toLocaleString("hu-HU")} / 7 000 karakter</small>
+              <div className="ai-action-buttons">
+                {isGenerating && (
+                  <button type="button" className="btn btn-secondary" onClick={() => generationController.current?.abort()}>
+                    Megszakítás
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={isGenerating || aiTopic.trim().length < 50}
+                  onClick={handleGenerateQuestions}
+                >
+                  {isGenerating ? `Generálás · ${generationElapsed} mp` : `${aiCount} kérdés generálása`}
+                </button>
+              </div>
+            </div>
+            {isGenerating && (
+              <div className="ai-generation-status" role="status" aria-live="polite">
+                <span className="ai-spinner" />
+                <span>{generationStatus}</span>
+              </div>
+            )}
+          </div>
+
           <div className="card section question-builder">
             <h3>{editingQuestionId ? "Kérdés szerkesztése" : "Új kérdés hozzáadása"}</h3>
             <input 

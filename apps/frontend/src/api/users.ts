@@ -24,6 +24,7 @@ export type UserOverview = {
     difficulty: "easy" | "medium" | "hard";
     xp_reward: number;
     progress: number;
+    date: string;
     completed_at?: string | null;
   }>;
   streak_days?: number;

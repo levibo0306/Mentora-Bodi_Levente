@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db";
 import { requireAuth } from "../middleware/auth";
-import { generateQuizFromText } from "../services/ai";
+import { AiServiceError, generateQuizFromText } from "../services/ai";
 import { addXp, updateDailyMissionsOnAttempt } from "../services/gamification";
 
 export const quizzesRouter = Router();
@@ -474,13 +474,23 @@ quizzesRouter.post("/:id/attempt", requireAuth, async (req: any, res) => {
  * --- AI GENERÁLÁS ---
  */
 quizzesRouter.post("/generate-ai", requireAuth, async (req: any, res) => {
-  const { topic } = z.object({ topic: z.string().min(3) }).parse(req.body);
+  const { text, count } = z.object({
+    text: z.string().trim().min(50).max(7_000),
+    count: z.number().int().min(1).max(10).default(5),
+  }).parse(req.body);
+  const controller = new AbortController();
+  res.on("close", () => {
+    if (!res.writableEnded) controller.abort();
+  });
 
   try {
-    const questions = await generateQuizFromText(topic);
+    const questions = await generateQuizFromText(text, count, controller.signal);
     res.json(questions);
   } catch (err) {
     console.error("AI Error:", err);
+    if (err instanceof AiServiceError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     res.status(500).json({ error: "Nem sikerült a kérdések generálása." });
   }
 });

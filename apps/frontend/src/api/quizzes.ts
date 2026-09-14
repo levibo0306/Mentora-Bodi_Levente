@@ -132,10 +132,11 @@ export async function submitQuizAttempt(quizId: string, answers: QuizSubmission)
   });
 }
 
-export async function generateQuestionsAI(topic: string) {
+export async function generateQuestionsAI(text: string, count: number, signal?: AbortSignal) {
   return api<CreateQuestionDto[]>("/api/quizzes/generate-ai", {
     method: "POST",
-    body: JSON.stringify({ topic }),
+    body: JSON.stringify({ text, count }),
+    signal,
   });
 }
 

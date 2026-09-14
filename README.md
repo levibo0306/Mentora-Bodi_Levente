@@ -17,6 +17,7 @@ mentora-prototype/
 ### Előfeltételek
 - Node.js 18+ (ajánlott: 20 LTS)
 - PostgreSQL (helyben futó szerver)
+- Ollama (opcionális, a helyi AI kérdésgeneráláshoz)
 
 ### Telepítés
 A repó gyökérből:
@@ -35,6 +36,29 @@ Példa:
 DATABASE_URL=postgres://USER:PASSWORD@localhost:5432/mentora
 PORT=3001
 ```
+
+### Helyi AI kérdésgenerálás
+
+Az AI funkció nem használ fizetős API-t: a backend a helyben futó Ollamát hívja.
+
+1. Töltsd le és telepítsd az Ollama macOS alkalmazást: https://ollama.com/download/mac
+2. Nyisd meg az Ollama alkalmazást.
+3. Töltsd le a modellt:
+
+```bash
+ollama pull qwen3:4b
+```
+
+Az alkalmazás futása közben az Ollama API automatikusan elérhető. A modell és az elérési cím az `apps/backend/.env` fájlban felülírható:
+
+```env
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen3:4b
+OLLAMA_TIMEOUT_MS=120000
+OLLAMA_NUM_CTX=4096
+```
+
+A kvízkészítő második lépésében illeszd be a tananyagot, válaszd ki a kérdésszámot, majd ellenőrizd a listába kerülő kérdéseket mentés előtt.
 
 ### Backend indítás
 Az adatbázisséma első betöltése után hozd létre a tesztfiókokat:

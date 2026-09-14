@@ -43,6 +43,7 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
       const type = response.headers.get("content-type") ?? "";
       return (type.includes("application/json") ? await response.json() : await response.text()) as T;
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") throw error;
       lastError = error instanceof ApiError ? error : new ApiError("A szerver nem érhető el. Ellenőrizd a kapcsolatot és próbáld újra.", 0, true);
       if (!lastError.retryable || attempt === maxAttempts) break;
       await wait(300 * 2 ** (attempt - 1));
