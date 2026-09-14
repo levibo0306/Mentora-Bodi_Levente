@@ -45,7 +45,7 @@ export const TopicsPanel = () => {
 
   const handleClaim = async () => {
     setStatus(null);
-const token = claimValue.trim().split("/shared/").pop() || "";
+    const token = claimValue.trim().split("/shared/").pop() || "";
     if (!token) return;
     try {
       await claimTopic(token);
@@ -60,7 +60,10 @@ const token = claimValue.trim().split("/shared/").pop() || "";
   return (
     <div className="card section">
       <div className="section-header">
-        <h3>Témák</h3>
+        <div>
+          <h3>Témák</h3>
+          <p className="section-help">Egy téma közös polcra rendezi a hozzá tartozó kvízeket és kártyapackeket. Megosztáskor a teljes tanulási egység eljut a diákhoz.</p>
+        </div>
       </div>
 
       {isTeacher && (

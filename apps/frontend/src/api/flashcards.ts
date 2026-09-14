@@ -1,26 +1,25 @@
 import { api } from "./http";
 
 export type Flashcard = {
-  id: string;
-  front: string;
-  back: string;
-  created_at: string;
+  id: string; front: string; back: string; position: number;
+  repetitions: number; interval_days: number; ease_factor: number; due_at: string; review_count: number;
 };
+export type FlashcardPack = {
+  id: string; title: string; description?: string | null; topic_id?: string | null; topic_name?: string | null;
+  owner_id: string; owner_name?: string; card_count: number; due_count: number; review_count: number; cards?: Flashcard[];
+};
+export type NewCard = Pick<Flashcard, "front" | "back">;
 
-export async function getFlashcards(topicId?: string | null) {
-  const qs = topicId ? `?topic_id=${encodeURIComponent(topicId)}` : "";
-  return api<Flashcard[]>(`/api/flashcards${qs}`);
-}
-
-export async function createFlashcard(front: string, back: string, topicId?: string | null) {
-  return api<Flashcard>("/api/flashcards", {
-    method: "POST",
-    body: JSON.stringify({ front, back, topic_id: topicId ?? undefined }),
-  });
-}
-
-export async function deleteFlashcard(id: string) {
-  return api<{ ok: boolean }>(`/api/flashcards/${id}`, {
-    method: "DELETE",
-  });
-}
+export const getFlashcardPacks = (topicId?: string | null) =>
+  api<FlashcardPack[]>(`/api/flashcards/packs${topicId ? `?topic_id=${encodeURIComponent(topicId)}` : ""}`);
+export const getFlashcardPack = (id: string) => api<FlashcardPack & { cards: Flashcard[] }>(`/api/flashcards/packs/${id}`);
+export const createFlashcardPack = (data: { title: string; description?: string; topic_id?: string | null; cards: NewCard[] }) =>
+  api<FlashcardPack>("/api/flashcards/packs", { method: "POST", body: JSON.stringify(data) });
+export const importQuizAsPack = (quizId: string, title?: string) =>
+  api<FlashcardPack>("/api/flashcards/packs/import-quiz", { method: "POST", body: JSON.stringify({ quiz_id: quizId, title }) });
+export const reviewFlashcard = (packId: string, cardId: string, quality: number) =>
+  api(`/api/flashcards/packs/${packId}/review`, { method: "POST", body: JSON.stringify({ card_id: cardId, quality }) });
+export const deleteFlashcardPack = (id: string) => api(`/api/flashcards/packs/${id}`, { method: "DELETE" });
+export const getFlashcardPackStats = (id: string) => api<Array<{
+  student_id: string; username: string; email: string; cards_seen: number; reviews: number; success_rate: number; last_studied: string;
+}>>(`/api/flashcards/packs/${id}/stats`);

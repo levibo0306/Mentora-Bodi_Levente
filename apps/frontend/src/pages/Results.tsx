@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getQuizzes, getQuizResults, Quiz, QuizAttempt, QuizResults } from "../api/quizzes";
+import { PageLayout } from "../ui/PageLayout";
 
 export const Results = () => {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -46,22 +47,18 @@ export const Results = () => {
   }, [results, selectedAttemptId]);
 
   return (
-    <div style={{ padding: "30px 20px" }}>
-      <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
-        <h2 style={{ fontSize: "28px", marginBottom: "16px" }}>📊 Eredmények</h2>
-
-        <div style={{ marginBottom: "24px", display: "flex", gap: "12px", alignItems: "center" }}>
-          <label style={{ fontSize: "14px", color: "#666" }}>Kvíz kiválasztása</label>
+    <PageLayout
+      title="Eredmények"
+      subtitle="Kvízenkénti teljesítmény, próbálkozások és válaszstatisztikák."
+    >
+        <div className="results-toolbar card">
+          <label htmlFor="results-quiz">Kvíz kiválasztása</label>
           <select
+            id="results-quiz"
             value={selectedQuizId}
             onChange={(e) => setSelectedQuizId(e.target.value)}
-            style={{
-              padding: "10px 12px",
-              borderRadius: "8px",
-              border: "1px solid #ddd",
-              minWidth: "260px",
-            }}
           >
+            {quizzes.length === 0 && <option value="">Nincs elérhető kvíz</option>}
             {quizzes.map((q) => (
               <option key={q.id} value={q.id}>
                 {q.title}
@@ -72,85 +69,84 @@ export const Results = () => {
 
         {loading && <div className="loading">Betöltés...</div>}
 
+        {!loading && quizzes.length === 0 && (
+          <div className="empty-state">
+            <p>Még nincs olyan kvízed, amelyhez eredményeket lehetne megjeleníteni.</p>
+          </div>
+        )}
+
         {!loading && results && (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-              <div style={{ background: "white", padding: "20px", borderRadius: "16px" }}>
-                <h3 style={{ marginBottom: "12px" }}>👥 Próbálkozások</h3>
+            <div className="results-grid">
+              <section className="results-card">
+                <h2 className="results-card-title">Próbálkozások</h2>
                 {results.attempts.length === 0 && (
-                  <div style={{ color: "#666" }}>Még nincs kitöltés ennél a kvíznél.</div>
+                  <div className="empty-subtle">Még nincs kitöltés ennél a kvíznél.</div>
                 )}
                 {results.attempts.map((a) => (
                   <button
                     key={a.id}
                     onClick={() => setSelectedAttemptId(a.id)}
-                    className="btn btn-secondary"
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      marginBottom: "10px",
-                      background: a.id === selectedAttemptId ? "var(--light)" : undefined,
-                    }}
+                    className={`attempt-row ${a.id === selectedAttemptId ? "active" : ""}`}
                   >
-                    <strong>{a.student_email ?? "Anonim"}</strong> – {a.score}% –{" "}
-                    {new Date(a.created_at).toLocaleString("hu-HU")}
+                    <span className="attempt-student">{a.student_email ?? "Anonim"}</span>
+                    <span className="attempt-meta">
+                      <strong>{a.score}%</strong>
+                      {new Date(a.created_at).toLocaleString("hu-HU")}
+                    </span>
                   </button>
                 ))}
-              </div>
+              </section>
 
-              <div style={{ background: "white", padding: "20px", borderRadius: "16px" }}>
-                <h3 style={{ marginBottom: "12px" }}>🧠 Válaszok (kijelölt próbálkozás)</h3>
-                {!selectedAttempt && <div style={{ color: "#666" }}>Válassz egy próbálkozást.</div>}
+              <section className="results-card">
+                <h2 className="results-card-title">Válaszok</h2>
+                {!selectedAttempt && <div className="empty-subtle">Válassz egy próbálkozást.</div>}
                 {selectedAttempt && results.questions.map((q) => {
                   const selected = selectedAttempt.answers?.[q.id];
                   const correct = q.correct_index;
                   return (
-                    <div key={q.id} style={{ padding: "12px 0", borderBottom: "1px solid #f0f0f0" }}>
-                      <div style={{ fontWeight: 600, marginBottom: "6px" }}>{q.prompt}</div>
-                      <div style={{ fontSize: "14px", color: "#444" }}>
+                    <div key={q.id} className="answer-detail">
+                      <div className="answer-prompt">{q.prompt}</div>
+                      <div className="answer-value">
                         Válasz:{" "}
-                        <strong style={{ color: selected === correct ? "var(--success)" : "var(--danger)" }}>
+                        <strong className={selected === correct ? "is-correct" : "is-wrong"}>
                           {selected !== undefined ? q.options[selected] : "Nincs válasz"}
                         </strong>
                       </div>
-                      <div style={{ fontSize: "13px", color: "#888" }}>
+                      <div className="answer-correct">
                         Helyes: {q.options[correct]}
                       </div>
                     </div>
                   );
                 })}
-              </div>
+              </section>
             </div>
 
-            <div style={{ marginTop: "24px", background: "white", padding: "20px", borderRadius: "16px" }}>
-              <h3 style={{ marginBottom: "12px" }}>📈 Kérdésenkénti statisztika</h3>
+            <section className="results-card results-breakdown">
+              <h2 className="results-card-title">Kérdésenkénti statisztika</h2>
               {results.stats.map((s) => {
                 const q = results.questions.find((qq) => qq.id === s.question_id);
                 if (!q) return null;
                 const total = Math.max(s.total, 1);
                 return (
-                  <div key={s.question_id} style={{ marginBottom: "20px" }}>
-                    <div style={{ fontWeight: 600, marginBottom: "8px" }}>{q.prompt}</div>
+                  <div key={s.question_id} className="question-stat">
+                    <div className="answer-prompt">{q.prompt}</div>
                     {q.options.map((opt, idx) => {
                       const count = s.counts[idx] ?? 0;
                       const pct = Math.round((count / total) * 100);
                       const isCorrect = idx === s.correct_index;
                       return (
-                        <div key={`${s.question_id}-${idx}`} style={{ marginBottom: "8px" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
-                            <span style={{ color: isCorrect ? "var(--success)" : "#555" }}>
-                              {isCorrect ? "✅ " : ""}{opt}
+                        <div key={`${s.question_id}-${idx}`} className="option-stat">
+                          <div className="option-stat-label">
+                            <span className={isCorrect ? "is-correct" : ""}>
+                              {isCorrect ? "Helyes: " : ""}{opt}
                             </span>
                             <span>{count} válasz ({pct}%)</span>
                           </div>
-                          <div style={{ height: "8px", background: "#f1f1f1", borderRadius: "6px" }}>
+                          <div className="option-stat-track">
                             <div
-                              style={{
-                                height: "8px",
-                                width: `${pct}%`,
-                                borderRadius: "6px",
-                                background: isCorrect ? "var(--success)" : "#bbb",
-                              }}
+                              className={`option-stat-fill ${isCorrect ? "correct" : ""}`}
+                              style={{ width: `${pct}%` }}
                             />
                           </div>
                         </div>
@@ -159,10 +155,9 @@ export const Results = () => {
                   </div>
                 );
               })}
-            </div>
+            </section>
           </>
         )}
-      </div>
-    </div>
+    </PageLayout>
   );
 };

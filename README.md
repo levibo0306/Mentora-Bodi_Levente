@@ -37,6 +37,27 @@ PORT=3001
 ```
 
 ### Backend indítás
+Az adatbázisséma első betöltése után hozd létre a tesztfiókokat:
+
+```bash
+(set -a; source apps/backend/.env; set +a; psql "$DATABASE_URL" -f apps/backend/sql/schema.sql)
+npm run migrate
+npm run seed
+```
+
+Már létező adatbázisnál csak az új, biztonságosan ismételhető migráció szükséges:
+
+```bash
+npm run migrate
+```
+
+Teszt belépők:
+
+- Diák: `diak@mentora.local` / `Mentora123!`
+- Tanár: `tanar@mentora.local` / `Mentora123!`
+
+Ezután indítsd el a backendet:
+
 ```bash
 npm run dev:backend
 ```
@@ -64,4 +85,3 @@ npm run test:frontend:ci
 ## 4) Dokumentáció
 
 A részletes dokumentumok a `docs/` mappában vannak (PRD/ADR, Sprint 1-2 anyagok, prototype).
-

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { getUserOverview } from "../api/users";
+import { PageLayout } from "../ui/PageLayout";
 
 export const Profile = () => {
   const { user } = useAuth();
@@ -21,10 +22,8 @@ export const Profile = () => {
   if (!user) return null;
 
   return (
-    <div style={{ padding: "30px 20px" }}>
-      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
-        <div className="card section">
-          <h2>Profil</h2>
+    <PageLayout title="Profil" subtitle="Fiókadatok és személyes előrehaladás." width="medium">
+        <section className="card section profile-card">
           <div className="profile-grid">
             <div>
               <div className="profile-label">Felhasználónév</div>
@@ -55,8 +54,7 @@ export const Profile = () => {
               </>
             )}
           </div>
-        </div>
-      </div>
-    </div>
+        </section>
+    </PageLayout>
   );
 };

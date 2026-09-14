@@ -15,9 +15,17 @@ export const Navbar: React.FC = () => {
 
   return (
     <nav className="navbar">
-      <div className="logo">Mentora</div>
+      <Link to="/" className="logo navbar-logo" aria-label="Vissza a főoldalra">
+        Mentora
+      </Link>
 
       <div className="nav-actions">
+        <Link to="/flashcards" className="btn btn-secondary" style={{ padding: "8px 14px", textDecoration: "none" }}>
+          Kártyák
+        </Link>
+        <Link to="/feedback" className="btn btn-secondary" style={{ padding: "8px 14px", textDecoration: "none" }}>
+          Visszajelzések
+        </Link>
         {user.role === "student" && (
           <Link
             to="/missions"

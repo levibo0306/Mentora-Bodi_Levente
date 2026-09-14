@@ -36,3 +36,15 @@ export async function getUserOverview() {
 export async function getUserMissions(limit = 14) {
   return api<UserOverview["daily_missions"]>(`/api/users/me/missions?limit=${limit}`);
 }
+
+export type WeeklyGoal = {
+  week_start: string;
+  target_quizzes: number;
+  target_flashcards: number;
+  target_active_days: number;
+  progress: { quizzes: number; flashcards: number; active_days: number };
+};
+
+export const getWeeklyGoal = () => api<WeeklyGoal>("/api/users/me/weekly-goal");
+export const trackActivity = (type: "app_open" | "view_topic" | "visit_profile" | "visit_missions" | "visit_flashcards" | "complete_flashcard_session", metadata?: Record<string, unknown>) =>
+  api<{ ok: true }>("/api/users/me/activity", { method: "POST", body: JSON.stringify({ type, amount: 1, metadata }) });

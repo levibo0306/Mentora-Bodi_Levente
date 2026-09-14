@@ -18,6 +18,13 @@ export async function getTopic(id: string) {
   return api<Topic>(`/api/topics/${id}`);
 }
 
+export type TopicStats = {
+  quizzes: Array<{ id: string; title: string; attempts: number; students: number; avg_score: number }>;
+  packs: Array<{ id: string; title: string; cards: number; students: number; reviews: number; success_rate: number }>;
+};
+
+export const getTopicStats = (id: string) => api<TopicStats>(`/api/topics/${id}/stats`);
+
 export async function createTopic(data: {
   name: string;
   description?: string;

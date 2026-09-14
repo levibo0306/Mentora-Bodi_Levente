@@ -9,6 +9,8 @@
     "install:all": "npm install --workspaces",
     "dev:frontend": "npm --workspace apps/frontend run dev",
     "dev:backend": "npm --workspace apps/backend run dev",
+    "migrate": "npm --workspace apps/backend run migrate",
+    "seed": "npm --workspace apps/backend run seed",
     "test:frontend": "npm --workspace apps/frontend run test",
     "test:frontend:ci": "npm --workspace apps/frontend run test:ci"
   }

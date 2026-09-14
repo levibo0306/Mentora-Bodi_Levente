@@ -10,6 +10,7 @@ import { shareRouter } from "./routes/share";
 import { usersRouter } from "./routes/users";
 import { flashcardsRouter } from "./routes/flashcards";
 import { topicsRouter } from "./routes/topics";
+import { feedbackRouter } from "./routes/feedback";
 
 
 const app = express();
@@ -57,6 +58,7 @@ app.use("/api", shareRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/flashcards", flashcardsRouter);
 app.use("/api/topics", topicsRouter);
+app.use("/api/feedback", feedbackRouter);
 
 // Error handler
 app.use((err: any, _req: any, res: any, _next: any) => {

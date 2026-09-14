@@ -3,6 +3,7 @@ import { z } from "zod";
 import { nanoid } from "nanoid";
 import { pool } from "../db";
 import { requireAuth, requireRole } from "../middleware/auth";
+import { recordLearningEvent } from "../services/gamification";
 
 export const topicsRouter = Router();
 
@@ -72,10 +73,38 @@ topicsRouter.get("/:id", requireAuth, async (req: any, res) => {
       [userId, id]
     );
     if (r.rowCount === 0) return res.status(404).json({ error: "Not found" });
+    const offset = Number(req.headers["x-timezone-offset"] ?? 0);
+    await recordLearningEvent(userId, "view_topic", 1, { topic_id: id }, Number.isFinite(offset) ? offset : 0);
     return res.json(r.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });
+  }
+});
+
+topicsRouter.get("/:id/stats", requireAuth, requireRole("teacher"), async (req: any, res) => {
+  const userId = req.user.sub;
+  const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+  try {
+    const topic = await pool.query("SELECT 1 FROM topics WHERE id=$1 AND owner_id=$2", [id, userId]);
+    if (!topic.rowCount) return res.status(404).json({ error: "A téma nem található." });
+    const quizStats = await pool.query(
+      `SELECT q.id,q.title,COUNT(a.id)::int AS attempts,COUNT(DISTINCT a.user_id)::int AS students,
+              COALESCE(ROUND(AVG(a.score)),0)::int AS avg_score
+       FROM quizzes q LEFT JOIN attempts a ON a.quiz_id=q.id
+       WHERE q.topic_id=$1 GROUP BY q.id,q.title ORDER BY q.created_at DESC`, [id]
+    );
+    const packStats = await pool.query(
+      `SELECT p.id,p.title,COUNT(DISTINCT c.id)::int AS cards,
+              COUNT(DISTINCT r.user_id)::int AS students,COALESCE(SUM(r.review_count),0)::int AS reviews,
+              COALESCE(ROUND(100.0*SUM(r.correct_count)/NULLIF(SUM(r.review_count),0)),0)::int AS success_rate
+       FROM flashcard_packs p LEFT JOIN flashcards c ON c.pack_id=p.id LEFT JOIN flashcard_reviews r ON r.card_id=c.id
+       WHERE p.topic_id=$1 GROUP BY p.id,p.title ORDER BY p.created_at DESC`, [id]
+    );
+    res.json({ quizzes: quizStats.rows, packs: packStats.rows });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Nem sikerült betölteni a témastatisztikát." });
   }
 });
 

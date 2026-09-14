@@ -100,7 +100,7 @@ export const DashboardOverview = () => {
       </div>
 
       <div className="mission-grid">
-        {(data.daily_missions ?? []).map((m) => {
+        {(data.daily_missions ?? []).slice(0, 3).map((m) => {
           const progress = Math.min(100, Math.round((m.progress / m.target) * 100));
           const done = !!m.completed_at || m.progress >= m.target;
           return (

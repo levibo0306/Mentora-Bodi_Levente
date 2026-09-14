@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Routes, Route, Navigate, Link } from "react-router-dom";
+import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import { Navbar } from "./ui/Navbar";
 import { Login } from "./pages/Login";
 import { QuizList } from "./ui/QuizList";
@@ -16,6 +16,11 @@ import { SharedWithMe } from "./ui/SharedWithMe";
 import { SharedAdd } from "./ui/SharedAdd";
 import { DashboardOverview } from "./ui/DashboardOverview";
 import { TopicsPanel } from "./ui/TopicsPanel";
+import { ErrorToaster } from "./ui/ErrorToaster";
+import { Feedback } from "./pages/Feedback";
+import { trackActivity } from "./api/users";
+import { Flashcards } from "./ui/Flashcards";
+import { FlashcardLibrary } from "./pages/FlashcardLibrary";
 
 // --- Dashboard Komponens ---
 const Dashboard = () => {
@@ -25,7 +30,7 @@ const Dashboard = () => {
   const [editingQuizId, setEditingQuizId] = useState<string | null>(null);
   
   // Tab state (csak diákoknak)
-  const [activeTab, setActiveTab] = useState<'own' | 'shared' | 'add' | 'topics'>('own');
+  const [activeTab, setActiveTab] = useState<'own' | 'flashcards' | 'shared' | 'add' | 'topics'>('own');
 
   const handleCreateClick = () => {
     setEditingQuizId(null);
@@ -63,6 +68,9 @@ const Dashboard = () => {
               <Link to="/results" className="btn btn-secondary btn-sm">
                 Eredmények
               </Link>
+              <Link to="/flashcards" className="btn btn-secondary btn-sm">
+                Kártyapackek
+              </Link>
             </div>
           </div>
         )}
@@ -70,11 +78,11 @@ const Dashboard = () => {
         {!isStudent && <TopicsPanel />}
 
         <div className="section-header">
-          <h2 className="section-title">{isStudent ? "Kvízeim" : "Saját kvízeim"}</h2>
+          <h2 className="section-title">{isStudent && activeTab === "flashcards" ? "Kártyapackjeim" : isStudent ? "Tanulóterem" : "Saját kvízeim"}</h2>
           
-          <button className="btn btn-primary btn-sm" onClick={handleCreateClick}>
+          {(!isStudent || activeTab === "own") && <button className="btn btn-primary btn-sm" onClick={handleCreateClick}>
               + Új Kvíz
-          </button>
+          </button>}
         </div>
 
         {/* TAB SWITCHER - csak diákoknak */}
@@ -85,6 +93,15 @@ const Dashboard = () => {
               className={`tab ${activeTab === 'own' ? "active" : ""}`}
             >
               📚 Saját Kvízek
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('flashcards');
+                trackActivity("visit_flashcards").catch(() => undefined);
+              }}
+              className={`tab ${activeTab === 'flashcards' ? "active" : ""}`}
+            >
+              🗂️ Kártyapackek
             </button>
             <button
               onClick={() => setActiveTab('shared')}
@@ -111,6 +128,8 @@ const Dashboard = () => {
         {isStudent ? (
           activeTab === 'own' ? (
             <QuizList key={refreshKey} onEdit={handleEditClick} />
+          ) : activeTab === 'flashcards' ? (
+            <Flashcards />
           ) : activeTab === 'shared' ? (
             <SharedWithMe key={`shared-${refreshKey}`} />
           ) : activeTab === 'add' ? (
@@ -144,8 +163,14 @@ const Dashboard = () => {
 };
 
 // --- Protected Route ---
-function ProtectedRoute({ children }: { children: JSX.Element }) {
-  const { isAuthenticated, isLoading } = useAuth();
+function ProtectedRoute({
+  children,
+  requiredRole,
+}: {
+  children: JSX.Element;
+  requiredRole?: "teacher" | "student";
+}) {
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -166,26 +191,51 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
     return <Navigate to="/login" replace />;
   }
 
+  if (requiredRole && user?.role !== requiredRole) {
+    return <Navigate to="/" replace />;
+  }
+
   return children;
 }
 
 // --- Main App Component ---
 export default function App() {
   const { user } = useAuth();
+  const location = useLocation();
+  const openTracked = React.useRef(false);
+
+  React.useEffect(() => {
+    if (user?.role === "student" && !openTracked.current) {
+      openTracked.current = true;
+      trackActivity("app_open").catch(() => undefined);
+    }
+  }, [user?.id]);
+
+  React.useEffect(() => {
+    if (user?.role !== "student") return;
+    const event = location.pathname === "/profile" ? "visit_profile"
+      : location.pathname === "/missions" ? "visit_missions"
+      : location.pathname === "/flashcards" ? "visit_flashcards"
+      : null;
+    if (event) trackActivity(event).catch(() => undefined);
+  }, [location.pathname, user?.role]);
 
   return (
     <div>
+      <ErrorToaster />
       {user && <Navbar />}
 
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/feedback" element={<ProtectedRoute><Feedback /></ProtectedRoute>} />
+        <Route path="/flashcards" element={<ProtectedRoute><FlashcardLibrary /></ProtectedRoute>} />
         
         {/* PUBLIC ROUTE - Nincs védelem! */}
         <Route path="/shared/:token" element={<SharedQuiz />} />
         <Route
           path="/results"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="teacher">
               <Results />
             </ProtectedRoute>
           }

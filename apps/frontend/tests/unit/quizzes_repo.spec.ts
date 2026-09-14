@@ -1,34 +1,53 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMemoryStorage } from "../../src/infra/storage";
-import { loadQuizzes, saveQuizzes, clearQuizzes } from "../../src/infra/quizzesRepo";
+import { clearQuizzes, loadQuizzes, saveQuizzes } from "../../src/infra/quizzesRepo";
 
 describe("quizzesRepo", () => {
-  it("starts empty", () => {
-    const storage = createMemoryStorage();
-    expect(loadQuizzes(storage)).toEqual([]);
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
-  it("saves and loads quizzes", () => {
-    const storage = createMemoryStorage();
-    saveQuizzes(storage, [
-      { id: "1", title: "TESZT" },
-      { id: "2", title: "KVÍZ" },
-    ]);
+  it("loads quizzes from the API", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { id: "1", title: "TESZT" },
+        { id: "2", title: "KVÍZ" },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
-    expect(loadQuizzes(storage)).toHaveLength(2);
-    expect(loadQuizzes(storage)[0].title).toBe("TESZT");
+    const quizzes = await loadQuizzes(createMemoryStorage());
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/quizzes");
+    expect(quizzes).toHaveLength(2);
+    expect(quizzes[0].title).toBe("TESZT");
   });
 
-  it("clears quizzes", () => {
-    const storage = createMemoryStorage();
-    saveQuizzes(storage, [{ id: "1", title: "TESZT" }]);
-    clearQuizzes(storage);
-    expect(loadQuizzes(storage)).toEqual([]);
+  it("returns an empty list for an API error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
+
+    await expect(loadQuizzes(createMemoryStorage())).resolves.toEqual([]);
   });
 
-  it("ignores invalid stored data", () => {
-    const storage = createMemoryStorage();
-    storage.setItem("mentora.quizzes.v1", JSON.stringify([{ nope: true }]));
-    expect(loadQuizzes(storage)).toEqual([]);
+  it("returns an empty list for a non-array response", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ invalid: true }),
+    }));
+
+    await expect(loadQuizzes(createMemoryStorage())).resolves.toEqual([]);
+  });
+
+  it("keeps saveQuizzes as an API-storage compatibility no-op", async () => {
+    await expect(
+      saveQuizzes(createMemoryStorage(), [{ id: "1", title: "TESZT" }])
+    ).resolves.toBeUndefined();
+  });
+
+  it("rejects clearing all API-backed quizzes", async () => {
+    await expect(clearQuizzes(createMemoryStorage())).rejects.toThrow(
+      "clearQuizzes is not implemented for API storage"
+    );
   });
 });
