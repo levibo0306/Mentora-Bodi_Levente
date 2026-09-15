@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { FeedbackContact, FeedbackMessage, getFeedbackContacts, getFeedbackMessages, sendFeedbackMessage } from "../api/feedback";
+import { FeedbackContact, FeedbackMessage, FeedbackTarget, getFeedbackContacts, getFeedbackMessages, getFeedbackTargets, sendFeedbackMessage } from "../api/feedback";
 import { PageLayout } from "../ui/PageLayout";
 import { useAuth } from "../context/AuthContext";
 
@@ -9,17 +9,27 @@ export function Feedback() {
   const [selectedId, setSelectedId] = useState("");
   const [messages, setMessages] = useState<FeedbackMessage[]>([]);
   const [draft, setDraft] = useState("");
+  const [targets, setTargets] = useState<FeedbackTarget[]>([]);
+  const [targetKey, setTargetKey] = useState("");
   const [sending, setSending] = useState(false);
 
   useEffect(() => { getFeedbackContacts().then((data) => { setContacts(data); setSelectedId((id) => id || data[0]?.id || ""); }).catch(() => setContacts([])); }, []);
-  useEffect(() => { if (selectedId) getFeedbackMessages(selectedId).then(setMessages).catch(() => setMessages([])); else setMessages([]); }, [selectedId]);
+  useEffect(() => {
+    if (!selectedId) { setMessages([]); setTargets([]); return; }
+    Promise.all([getFeedbackMessages(selectedId), getFeedbackTargets(selectedId)])
+      .then(([messageData, targetData]) => {
+        setMessages(messageData); setTargets(targetData);
+        setTargetKey((value) => targetData.some((target) => `${target.type}:${target.id}` === value) ? value : targetData[0] ? `${targetData[0].type}:${targetData[0].id}` : "");
+      }).catch(() => { setMessages([]); setTargets([]); });
+  }, [selectedId]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!draft.trim() || !selectedId) return;
     setSending(true);
     try {
-      await sendFeedbackMessage(selectedId, draft.trim());
+      const target = targets.find((item) => `${item.type}:${item.id}` === targetKey) ?? null;
+      await sendFeedbackMessage(selectedId, draft.trim(), target);
       setDraft("");
       setMessages(await getFeedbackMessages(selectedId));
     } finally { setSending(false); }
@@ -44,11 +54,16 @@ export function Feedback() {
             {selected && messages.length === 0 && <p className="empty-subtle">Még nincs üzenet. Írj konkrét, segítő visszajelzést.</p>}
             {messages.map((message) => (
               <article key={message.id} className={`feedback-message ${message.author_id === user?.id ? "mine" : ""}`}>
+                {message.target_title && <span className="feedback-target">{message.target_type === "quiz" ? "Kvíz" : message.target_type === "flashcards" ? "Flashcards" : "Téma"}: {message.target_title}</span>}
                 <div>{message.message}</div><small>{message.author_name} · {new Date(message.created_at).toLocaleString("hu-HU")}</small>
               </article>
             ))}
           </div>
           <form className="feedback-compose" onSubmit={submit}>
+            <select value={targetKey} onChange={(event) => setTargetKey(event.target.value)} disabled={!selectedId || sending} aria-label="Visszajelzés célja">
+              <option value="">Általános visszajelzés</option>
+              {targets.map((target) => <option key={`${target.type}:${target.id}`} value={`${target.type}:${target.id}`}>{target.type === "quiz" ? "Kvíz" : target.type === "flashcards" ? "Flashcards" : "Téma"}: {target.title}</option>)}
+            </select>
             <textarea value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={2000} placeholder="Írj visszajelzést vagy kérdést..." disabled={!selectedId || sending} />
             <button className="btn btn-primary" disabled={!selectedId || !draft.trim() || sending}>{sending ? "Küldés..." : "Küldés"}</button>
           </form>

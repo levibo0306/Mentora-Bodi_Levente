@@ -1,16 +1,36 @@
 import { Router } from "express";
+import multer from "multer";
 import { z } from "zod";
 import { pool } from "../db";
 import { requireAuth } from "../middleware/auth";
 import { AiServiceError, generateQuizFromText } from "../services/ai";
 import { addXp, updateDailyMissionsOnAttempt } from "../services/gamification";
+import { extractDocumentText, DocumentTextError } from "../services/documentText";
+import { rankAdaptiveQuestions } from "../services/adaptive";
 
 export const quizzesRouter = Router();
+const documentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024, files: 1 },
+}).single("file");
 
 /**
  * Helpers
  */
 const uuidParam = z.object({ id: z.string().uuid() });
+
+async function canAccessQuiz(quizId: string, userId: string) {
+  const result = await pool.query(
+    `SELECT 1 FROM quizzes q
+     WHERE q.id=$1 AND (
+       q.owner_id=$2 OR q.owner_id IS NULL
+       OR EXISTS (SELECT 1 FROM quiz_shares qs WHERE qs.quiz_id=q.id AND qs.recipient_id=$2)
+       OR EXISTS (SELECT 1 FROM topic_shares ts WHERE ts.topic_id=q.topic_id AND ts.recipient_id=$2)
+     )`,
+    [quizId, userId]
+  );
+  return Boolean(result.rowCount);
+}
 
 /**
  * --- KVÍZ CRUD ---
@@ -18,17 +38,18 @@ const uuidParam = z.object({ id: z.string().uuid() });
 
 quizzesRouter.get("/", requireAuth, async (req: any, res) => {
   const userId = req.user?.sub;
-  const role = req.user?.role;
   const topicId = typeof req.query.topic_id === "string" ? req.query.topic_id : null;
 
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   try {
     if (topicId) {
-      if (role === "teacher") {
+      const ownedTopic = await pool.query("SELECT 1 FROM topics WHERE id=$1 AND owner_id=$2", [topicId, userId]);
+      if (ownedTopic.rowCount) {
         const r = await pool.query(
           `SELECT 
               q.id, q.title, q.description, q.mode, q.created_at, q.updated_at, q.topic_id,
+              q.owner_id, (q.owner_id=$1) AS is_owner,
               (SELECT COUNT(*) FROM questions WHERE quiz_id = q.id)::int as question_count,
               (SELECT COUNT(*) FROM attempts WHERE quiz_id = q.id)::int as total_attempts,
               (SELECT AVG(difficulty) FROM questions WHERE quiz_id = q.id)::float as avg_difficulty
@@ -49,13 +70,14 @@ quizzesRouter.get("/", requireAuth, async (req: any, res) => {
       const r = await pool.query(
         `SELECT 
             q.id, q.title, q.description, q.mode, q.created_at, q.updated_at, q.topic_id,
+            q.owner_id, (q.owner_id=$2) AS is_owner,
             (SELECT COUNT(*) FROM questions WHERE quiz_id = q.id)::int as question_count,
             (SELECT COUNT(*) FROM attempts WHERE quiz_id = q.id)::int as total_attempts,
             (SELECT AVG(difficulty) FROM questions WHERE quiz_id = q.id)::float as avg_difficulty
-         FROM quizzes q
-         WHERE q.topic_id = $1
+       FROM quizzes q
+       WHERE q.topic_id = $1
          ORDER BY q.created_at DESC`,
-        [topicId]
+        [topicId, userId]
       );
       return res.json(r.rows);
     }
@@ -63,6 +85,7 @@ quizzesRouter.get("/", requireAuth, async (req: any, res) => {
     const r = await pool.query(
       `SELECT 
           q.id, q.title, q.description, q.mode, q.created_at, q.updated_at, q.topic_id,
+          q.owner_id, (q.owner_id=$1) AS is_owner,
           (SELECT COUNT(*) FROM questions WHERE quiz_id = q.id)::int as question_count,
           (SELECT COUNT(*) FROM attempts WHERE quiz_id = q.id)::int as total_attempts,
           (SELECT AVG(difficulty) FROM questions WHERE quiz_id = q.id)::float as avg_difficulty
@@ -86,7 +109,8 @@ quizzesRouter.get("/shared-with-me", requireAuth, async (req: any, res) => {
   try {
     const r = await pool.query(
       `SELECT 
-          q.id, q.title, q.description, q.mode,
+          q.id, q.title, q.description, q.mode, q.owner_id, (q.owner_id=$1) AS is_owner,
+          q.created_at, q.updated_at,
           s.token, s.created_at as shared_at,
           s.allow_reshare,
           COALESCE(owner.username, owner.email) as owner_display,
@@ -104,6 +128,27 @@ quizzesRouter.get("/shared-with-me", requireAuth, async (req: any, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });
+  }
+});
+
+quizzesRouter.get("/importable", requireAuth, async (req: any, res) => {
+  const userId = req.user?.sub;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const result = await pool.query(
+      `SELECT DISTINCT q.id,q.title,q.description,q.mode,q.topic_id,q.created_at,q.updated_at,
+              (SELECT COUNT(*) FROM questions WHERE quiz_id=q.id)::int AS question_count
+       FROM quizzes q
+       LEFT JOIN quiz_shares qs ON qs.quiz_id=q.id AND qs.recipient_id=$1
+       LEFT JOIN topic_shares ts ON ts.topic_id=q.topic_id AND ts.recipient_id=$1
+       WHERE q.owner_id=$1 OR qs.id IS NOT NULL OR ts.id IS NOT NULL
+       ORDER BY q.created_at DESC`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Nem sikerült betölteni az importálható kvízeket." });
   }
 });
 
@@ -187,8 +232,11 @@ quizzesRouter.get("/:id/results", requireAuth, async (req: any, res) => {
 
 quizzesRouter.get("/:id", requireAuth, async (req: any, res) => {
   const { id } = uuidParam.parse(req.params);
+  const userId = req.user?.sub;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   try {
+    if (!await canAccessQuiz(id, userId)) return res.status(404).json({ error: "A kvíz nem érhető el." });
     const r = await pool.query(
       `SELECT id, title, description, mode, owner_id, topic_id, created_at, updated_at
        FROM quizzes
@@ -218,6 +266,10 @@ quizzesRouter.post("/", requireAuth, async (req: any, res) => {
   const { title, description, mode, topic_id } = CreateQuiz.parse(req.body);
 
   try {
+    if (topic_id) {
+      const topic = await pool.query("SELECT 1 FROM topics WHERE id=$1 AND owner_id=$2", [topic_id, userId]);
+      if (!topic.rowCount) return res.status(403).json({ error: "A kvízt csak saját témához rendelheted." });
+    }
     const r = await pool.query(
       `INSERT INTO quizzes(owner_id, title, description, mode, topic_id)
        VALUES($1,$2,$3, COALESCE($4, 'practice'), $5)
@@ -239,6 +291,10 @@ quizzesRouter.put("/:id", requireAuth, async (req: any, res) => {
   const body = CreateQuiz.partial().parse(req.body);
 
   try {
+    if (body.topic_id) {
+      const topic = await pool.query("SELECT 1 FROM topics WHERE id=$1 AND owner_id=$2", [body.topic_id, userId]);
+      if (!topic.rowCount) return res.status(403).json({ error: "A kvízt csak saját témához rendelheted." });
+    }
     const r = await pool.query(
       `UPDATE quizzes
        SET 
@@ -367,8 +423,11 @@ quizzesRouter.put("/:id/questions/:qid", requireAuth, async (req: any, res) => {
 
 quizzesRouter.get("/:id/questions", requireAuth, async (req: any, res) => {
   const { id } = uuidParam.parse(req.params);
+  const userId = req.user?.sub;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   try {
+    if (!await canAccessQuiz(id, userId)) return res.status(404).json({ error: "A kvíz nem érhető el." });
     const r = await pool.query(
       `SELECT id, quiz_id, prompt, options, correct_index, explanation, difficulty, total_attempts, correct_attempts
        FROM questions
@@ -380,6 +439,60 @@ quizzesRouter.get("/:id/questions", requireAuth, async (req: any, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });
+  }
+});
+
+quizzesRouter.get("/:id/adaptive-questions", requireAuth, async (req: any, res) => {
+  const { id } = uuidParam.parse(req.params);
+  const userId = req.user?.sub;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  const requestedLimit = Number(req.query.limit ?? 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(20, Math.max(1, Math.trunc(requestedLimit))) : 10;
+
+  try {
+    if (!await canAccessQuiz(id, userId)) return res.status(404).json({ error: "A kvíz nem érhető el." });
+
+    const [questionResult, abilityResult] = await Promise.all([
+      pool.query(
+        `SELECT q.id, q.quiz_id, q.prompt, q.options, q.correct_index, q.explanation, q.difficulty,
+                COALESCE(p.attempts, 0)::int AS personal_attempts,
+                COALESCE(p.correct_count, 0)::int AS personal_correct_count
+         FROM questions q
+         LEFT JOIN student_question_profiles p ON p.question_id=q.id AND p.user_id=$2
+         WHERE q.quiz_id=$1`,
+        [id, userId],
+      ),
+      pool.query(
+        `SELECT AVG(score)::float AS average_score
+         FROM (SELECT score FROM attempts WHERE quiz_id=$1 AND user_id=$2 ORDER BY created_at DESC LIMIT 10) recent`,
+        [id, userId],
+      ),
+    ]);
+
+    const questions = rankAdaptiveQuestions(
+      questionResult.rows.map((row) => ({
+        question: {
+          id: row.id,
+          quiz_id: row.quiz_id,
+          prompt: row.prompt,
+          options: row.options,
+          explanation: row.explanation,
+          difficulty: row.difficulty,
+        },
+        questionId: row.id,
+        difficulty: row.difficulty,
+        attempts: row.personal_attempts,
+        correctCount: row.personal_correct_count,
+      })),
+      abilityResult.rows[0]?.average_score,
+      limit,
+    );
+
+    res.json(questions);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Nem sikerült összeállítani a személyre szabott kérdéssort." });
   }
 });
 
@@ -397,16 +510,22 @@ quizzesRouter.post("/:id/attempt", requireAuth, async (req: any, res) => {
   const { id } = uuidParam.parse(req.params);
 
   const { answers } = z
-    .object({ answers: z.record(z.string(), z.number()) })
+    .object({ answers: z.record(z.string().uuid(), z.number().int().min(0).max(20)) })
     .parse(req.body);
 
   try {
+    if (!await canAccessQuiz(id, userId)) return res.status(404).json({ error: "A kvíz nem érhető el." });
     // Kérdések lekérése
+    const answeredQuestionIds = Object.keys(answers);
+    if (!answeredQuestionIds.length) return res.status(400).json({ error: "Legalább egy választ adj meg." });
     const qRes = await pool.query(
-      "SELECT id, correct_index FROM questions WHERE quiz_id=$1",
-      [id]
+      "SELECT id, correct_index FROM questions WHERE quiz_id=$1 AND id = ANY($2::uuid[])",
+      [id, answeredQuestionIds]
     );
     const questions = qRes.rows as Array<{ id: string; correct_index: number }>;
+    if (questions.length !== answeredQuestionIds.length) {
+      return res.status(400).json({ error: "A válaszok között érvénytelen kérdés szerepel." });
+    }
 
     let correctCount = 0;
 
@@ -436,6 +555,22 @@ quizzesRouter.post("/:id/attempt", requireAuth, async (req: any, res) => {
          WHERE id = $2`,
         [isCorrect ? 1 : 0, q.id]
       );
+
+      if (req.user?.role === "student") {
+        await pool.query(
+          `INSERT INTO student_question_profiles
+             (user_id, question_id, attempts, correct_count, mastery_score, last_answer_correct, last_answered_at)
+           VALUES ($1, $2, 1, $3, $3, $4, now())
+           ON CONFLICT (user_id, question_id) DO UPDATE SET
+             attempts = student_question_profiles.attempts + 1,
+             correct_count = student_question_profiles.correct_count + EXCLUDED.correct_count,
+             mastery_score = (student_question_profiles.correct_count + EXCLUDED.correct_count)::numeric
+               / (student_question_profiles.attempts + 1),
+             last_answer_correct = EXCLUDED.last_answer_correct,
+             last_answered_at = now()`,
+          [userId, q.id, isCorrect ? 1 : 0, isCorrect],
+        );
+      }
     }
 
     const score =
@@ -492,6 +627,40 @@ quizzesRouter.post("/generate-ai", requireAuth, async (req: any, res) => {
       return res.status(err.statusCode).json({ error: err.message });
     }
     res.status(500).json({ error: "Nem sikerült a kérdések generálása." });
+  }
+});
+
+quizzesRouter.post("/generate-ai-file", requireAuth, async (req: any, res) => {
+  try {
+    await new Promise<void>((resolve, reject) => {
+      documentUpload(req, res, (error) => error ? reject(error) : resolve());
+    });
+    if (!req.file) return res.status(400).json({ error: "Válassz egy PDF vagy DOCX dokumentumot." });
+
+    const count = z.coerce.number().int().min(1).max(10).default(5).parse(req.body.count);
+    const source = await extractDocumentText(req.file.buffer, req.file.originalname, req.file.mimetype);
+    const controller = new AbortController();
+    res.on("close", () => controller.abort());
+    const questions = await generateQuizFromText(source.text, count, controller.signal);
+
+    res.json({
+      questions,
+      source: {
+        filename: req.file.originalname,
+        characters: source.originalCharacters,
+        truncated: source.truncated,
+      },
+    });
+  } catch (error) {
+    console.error("AI document error:", error);
+    if (error instanceof multer.MulterError) {
+      return res.status(error.code === "LIMIT_FILE_SIZE" ? 413 : 400).json({
+        error: error.code === "LIMIT_FILE_SIZE" ? "A dokumentum legfeljebb 8 MB lehet." : "A dokumentum feltöltése sikertelen.",
+      });
+    }
+    if (error instanceof DocumentTextError) return res.status(error.statusCode).json({ error: error.message });
+    if (error instanceof AiServiceError) return res.status(error.statusCode).json({ error: error.message });
+    return res.status(500).json({ error: "Nem sikerült kérdéseket generálni a dokumentumból." });
   }
 });
 

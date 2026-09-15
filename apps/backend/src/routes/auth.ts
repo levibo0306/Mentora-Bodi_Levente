@@ -105,6 +105,53 @@ authRouter.get("/me", requireAuth, async (req, res) => {
   }
 });
 
+const UpdateProfileBody = z.object({
+  username: z.string().trim().min(3).max(24).regex(/^[a-zA-Z0-9_.]+$/),
+  email: z.string().trim().email(),
+  current_password: z.string().min(1),
+  new_password: z.string().min(6).max(72).optional(),
+});
+
+authRouter.patch("/me", requireAuth, async (req: any, res) => {
+  const userId = req.user?.sub;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const body = UpdateProfileBody.parse(req.body);
+    const current = await pool.query(
+      "SELECT id, username, email, role, password_hash FROM users WHERE id=$1",
+      [userId]
+    );
+    if (current.rowCount === 0) return res.status(404).json({ error: "A felhasználó nem található." });
+
+    const validPassword = await bcrypt.compare(body.current_password, current.rows[0].password_hash);
+    if (!validPassword) return res.status(400).json({ error: "A jelenlegi jelszó hibás." });
+
+    const passwordHash = body.new_password
+      ? await bcrypt.hash(body.new_password, 12)
+      : current.rows[0].password_hash;
+    const updated = await pool.query(
+      `UPDATE users
+       SET username=$1, email=$2, password_hash=$3
+       WHERE id=$4
+       RETURNING id, username, email, role`,
+      [body.username.toLowerCase(), body.email.toLowerCase(), passwordHash, userId]
+    );
+    const user = updated.rows[0];
+    const token = signToken({ sub: user.id, email: user.email, role: user.role });
+    res.json({ token, user });
+  } catch (err: any) {
+    if (err?.code === "23505") {
+      return res.status(409).json({ error: "Ez a felhasználónév vagy email cím már foglalt." });
+    }
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: "Ellenőrizd a megadott fiókadatokat." });
+    }
+    console.error("Profile update error:", err);
+    res.status(500).json({ error: "Nem sikerült módosítani a profilt." });
+  }
+});
+
 // --- LOGOUT ---
 authRouter.post("/logout", requireAuth, async (req, res) => {
   try {

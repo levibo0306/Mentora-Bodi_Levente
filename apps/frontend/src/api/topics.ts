@@ -7,6 +7,7 @@ export type Topic = {
   subject?: string | null;
   grade?: string | null;
   color?: string | null;
+  is_owner?: boolean;
   created_at: string;
 };
 

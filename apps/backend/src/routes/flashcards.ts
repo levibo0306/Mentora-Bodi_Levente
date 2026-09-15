@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { nanoid } from "nanoid";
 import { z } from "zod";
 import { pool } from "../db";
 import { requireAuth } from "../middleware/auth";
@@ -17,8 +18,9 @@ const PackSchema = z.object({
 async function canReadPack(packId: string, userId: string) {
   const result = await pool.query(
     `SELECT p.*, p.owner_id=$2 AS is_owner,
-       EXISTS (SELECT 1 FROM topic_shares ts JOIN topics t ON t.id=ts.topic_id
-               WHERE ts.topic_id=p.topic_id AND ts.recipient_id=$2 AND t.owner_id=p.owner_id) AS is_shared
+       (EXISTS (SELECT 1 FROM topic_shares ts JOIN topics t ON t.id=ts.topic_id
+                WHERE ts.topic_id=p.topic_id AND ts.recipient_id=$2 AND t.owner_id=p.owner_id)
+        OR EXISTS (SELECT 1 FROM flashcard_shares fs WHERE fs.pack_id=p.id AND fs.recipient_id=$2)) AS is_shared
      FROM flashcard_packs p WHERE p.id=$1`, [packId, userId]
   );
   const pack = result.rows[0];
@@ -41,13 +43,14 @@ flashcardsRouter.get("/packs", requireAuth, async (req: any, res) => {
        LEFT JOIN topics t ON t.id=p.topic_id LEFT JOIN users u ON u.id=p.owner_id
        WHERE ($2::uuid IS NULL OR p.topic_id=$2)
          AND (p.owner_id=$1 OR EXISTS (SELECT 1 FROM topic_shares ts JOIN topics shared_topic ON shared_topic.id=ts.topic_id
-                                      WHERE ts.topic_id=p.topic_id AND ts.recipient_id=$1 AND shared_topic.owner_id=p.owner_id))
+                                      WHERE ts.topic_id=p.topic_id AND ts.recipient_id=$1 AND shared_topic.owner_id=p.owner_id)
+              OR EXISTS (SELECT 1 FROM flashcard_shares fs WHERE fs.pack_id=p.id AND fs.recipient_id=$1))
        GROUP BY p.id, t.name, u.username ORDER BY p.updated_at DESC`, [userId, topicId]
     );
     res.json(result.rows);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Nem sikerült betölteni a kártyacsomagokat." });
+    res.status(500).json({ error: "Nem sikerült betölteni a Flashcards csomagokat." });
   }
 });
 
@@ -56,7 +59,7 @@ flashcardsRouter.get("/packs/:id", requireAuth, async (req: any, res) => {
   const id = uuid.parse(req.params.id);
   try {
     const pack = await canReadPack(id, userId);
-    if (!pack) return res.status(404).json({ error: "A kártyacsomag nem található." });
+    if (!pack) return res.status(404).json({ error: "A Flashcards csomag nem található." });
     const cards = await pool.query(
       `SELECT c.id, c.front, c.back, c.position,
               COALESCE(r.repetitions,0)::int AS repetitions,
@@ -69,7 +72,7 @@ flashcardsRouter.get("/packs/:id", requireAuth, async (req: any, res) => {
     res.json({ ...pack, cards: cards.rows });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Nem sikerült betölteni a kártyacsomagot." });
+    res.status(500).json({ error: "Nem sikerült betölteni a Flashcards csomagot." });
   }
 });
 
@@ -96,7 +99,7 @@ flashcardsRouter.post("/packs", requireAuth, async (req: any, res) => {
   } catch (error) {
     await client.query("ROLLBACK");
     console.error(error);
-    res.status(500).json({ error: "Nem sikerült létrehozni a kártyacsomagot." });
+    res.status(500).json({ error: "Nem sikerült létrehozni a Flashcards csomagot." });
   } finally { client.release(); }
 });
 
@@ -107,7 +110,8 @@ flashcardsRouter.post("/packs/import-quiz", requireAuth, async (req: any, res) =
   try {
     const quizResult = await client.query(
       `SELECT q.* FROM quizzes q WHERE q.id=$1 AND (q.owner_id=$2 OR EXISTS
-       (SELECT 1 FROM quiz_shares s WHERE s.quiz_id=q.id AND s.recipient_id=$2))`, [quiz_id, userId]
+       (SELECT 1 FROM quiz_shares s WHERE s.quiz_id=q.id AND s.recipient_id=$2) OR EXISTS
+       (SELECT 1 FROM topic_shares ts WHERE ts.topic_id=q.topic_id AND ts.recipient_id=$2))`, [quiz_id, userId]
     );
     if (!quizResult.rowCount) return res.status(404).json({ error: "A kvíz nem érhető el." });
     const quiz = quizResult.rows[0];
@@ -135,7 +139,7 @@ flashcardsRouter.post("/packs/import-quiz", requireAuth, async (req: any, res) =
   } catch (error) {
     await client.query("ROLLBACK");
     console.error(error);
-    res.status(500).json({ error: "Nem sikerült kártyacsomagot készíteni a kvízből." });
+    res.status(500).json({ error: "Nem sikerült Flashcards csomagot készíteni a kvízből." });
   } finally { client.release(); }
 });
 
@@ -144,7 +148,7 @@ flashcardsRouter.post("/packs/:id/review", requireAuth, async (req: any, res) =>
   const packId = uuid.parse(req.params.id);
   const { card_id, quality } = z.object({ card_id: uuid, quality: z.number().int().min(0).max(5) }).parse(req.body);
   try {
-    if (!await canReadPack(packId, userId)) return res.status(404).json({ error: "A kártyacsomag nem található." });
+    if (!await canReadPack(packId, userId)) return res.status(404).json({ error: "A Flashcards csomag nem található." });
     const card = await pool.query("SELECT 1 FROM flashcards WHERE id=$1 AND pack_id=$2", [card_id, packId]);
     if (!card.rowCount) return res.status(404).json({ error: "A kártya nem található." });
     const previous = await pool.query("SELECT * FROM flashcard_reviews WHERE user_id=$1 AND card_id=$2", [userId, card_id]);
@@ -188,8 +192,50 @@ flashcardsRouter.get("/packs/:id/stats", requireAuth, async (req: any, res) => {
   }
 });
 
+flashcardsRouter.post("/packs/:id/share", requireAuth, async (req: any, res) => {
+  const id = uuid.parse(req.params.id);
+  const body = z.object({ recipients: z.array(z.string().email()).optional() }).parse(req.body ?? {});
+  const owner = await pool.query("SELECT 1 FROM flashcard_packs WHERE id=$1 AND owner_id=$2", [id, req.user.sub]);
+  if (!owner.rowCount) return res.status(403).json({ error: "Csak a saját Flashcards csomagodat oszthatod meg." });
+
+  const emails = [...new Set((body.recipients ?? []).map((email) => email.trim().toLowerCase()))];
+  let recipients: Array<{ id: string; email: string }> = [];
+  if (emails.length) {
+    recipients = (await pool.query("SELECT id,email FROM users WHERE email=ANY($1)", [emails])).rows;
+    const found = new Set(recipients.map((recipient) => recipient.email));
+    const missing = emails.filter((email) => !found.has(email));
+    if (missing.length) return res.status(400).json({ error: `Nem található felhasználó: ${missing.join(", ")}` });
+  }
+
+  const targets = recipients.length ? recipients : [{ id: null, email: undefined }];
+  const tokens: Array<{ token: string; recipient_email?: string }> = [];
+  for (const recipient of targets) {
+    const token = nanoid(8);
+    await pool.query(
+      "INSERT INTO flashcard_shares(pack_id,token,recipient_id,shared_by) VALUES($1,$2,$3,$4)",
+      [id, token, recipient.id, req.user.sub]
+    );
+    tokens.push({ token, recipient_email: recipient.email });
+  }
+  res.json({ tokens });
+});
+
+flashcardsRouter.post("/share/claim", requireAuth, async (req: any, res) => {
+  const { token } = z.object({ token: z.string().trim().min(6) }).parse(req.body);
+  const share = (await pool.query("SELECT * FROM flashcard_shares WHERE token=$1", [token])).rows[0];
+  if (!share) return res.status(404).json({ error: "Érvénytelen Flashcards-kód." });
+  if (share.recipient_id && share.recipient_id !== req.user.sub) return res.status(403).json({ error: "Ez a megosztás másnak szól." });
+  if (share.recipient_id === req.user.sub) return res.json({ token });
+  const claimedToken = nanoid(8);
+  await pool.query(
+    "INSERT INTO flashcard_shares(pack_id,token,recipient_id,shared_by) VALUES($1,$2,$3,$4)",
+    [share.pack_id, claimedToken, req.user.sub, share.shared_by]
+  );
+  res.json({ token: claimedToken });
+});
+
 flashcardsRouter.delete("/packs/:id", requireAuth, async (req: any, res) => {
   const result = await pool.query("DELETE FROM flashcard_packs WHERE id=$1 AND owner_id=$2", [uuid.parse(req.params.id), req.user.sub]);
-  if (!result.rowCount) return res.status(404).json({ error: "A kártyacsomag nem található." });
+  if (!result.rowCount) return res.status(404).json({ error: "A Flashcards csomag nem található." });
   res.json({ ok: true });
 });

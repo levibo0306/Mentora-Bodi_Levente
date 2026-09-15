@@ -2,12 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/http";
 import { ShareModal } from "./ShareModal";
+import { getQuiz, getQuizQuestions, type Quiz } from "../api/quizzes";
+import { listOfflineQuizzes, removeOfflineQuiz, saveOfflineQuiz } from "../infra/offlineQuizzes";
 
-type SharedQuiz = {
-  id: string;
-  title: string;
-  description?: string;
-  mode: 'practice' | 'assessment';
+type SharedQuiz = Quiz & {
   question_count: number;
   owner_display: string | null;
   shared_by_display: string | null;
@@ -21,6 +19,9 @@ export const SharedWithMe = () => {
   const [loading, setLoading] = useState(true);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [selectedQuiz, setSelectedQuiz] = useState<SharedQuiz | null>(null);
+  const [offlineIds, setOfflineIds] = useState(() => new Set(listOfflineQuizzes().map((item) => item.quiz.id)));
+  const [offlineBusyId, setOfflineBusyId] = useState("");
+  const [offlineStatus, setOfflineStatus] = useState("");
 
   useEffect(() => {
     fetchSharedQuizzes();
@@ -42,6 +43,32 @@ export const SharedWithMe = () => {
   const handleReshare = (quiz: SharedQuiz) => {
     setSelectedQuiz(quiz);
     setShareModalOpen(true);
+  };
+
+  const toggleOffline = async (quiz: SharedQuiz) => {
+    setOfflineBusyId(quiz.id);
+    setOfflineStatus("");
+    try {
+      if (offlineIds.has(quiz.id)) {
+        removeOfflineQuiz(quiz.id);
+        setOfflineIds((current) => {
+          const next = new Set(current);
+          next.delete(quiz.id);
+          return next;
+        });
+        setOfflineStatus(`A(z) „${quiz.title}” offline példánya törölve.`);
+      } else {
+        const [details, questions] = await Promise.all([getQuiz(quiz.id), getQuizQuestions(quiz.id)]);
+        if (!questions.length) throw new Error("Üres kvízt nem lehet letölteni.");
+        saveOfflineQuiz({ ...quiz, ...details }, questions);
+        setOfflineIds((current) => new Set(current).add(quiz.id));
+        setOfflineStatus(`A(z) „${quiz.title}” internet nélkül is kitölthető.`);
+      }
+    } catch (error: any) {
+      setOfflineStatus(error?.message ?? "Nem sikerült letölteni a kvízt.");
+    } finally {
+      setOfflineBusyId("");
+    }
   };
 
   if (loading) {
@@ -73,6 +100,7 @@ export const SharedWithMe = () => {
 
   return (
     <>
+      {offlineStatus && <div className="inline-status success offline-status">{offlineStatus}</div>}
       <div className="quiz-grid">
         {sharedQuizzes.map((quiz) => (
           <div key={quiz.id} className="quiz-card">
@@ -158,12 +186,20 @@ export const SharedWithMe = () => {
 
             <div className="quiz-actions" style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
               <Link 
-                to={`/shared/${quiz.token}`} 
+                to={`/play/${quiz.id}`}
                 className="btn btn-primary"
                 style={{ flex: '1', textAlign: 'center' }}
               >
                 ▶ Kvíz Megnyitása
               </Link>
+              <button
+                onClick={() => toggleOffline(quiz)}
+                className="btn btn-secondary"
+                disabled={offlineBusyId === quiz.id}
+                style={{ flex: '1', textAlign: 'center' }}
+              >
+                {offlineBusyId === quiz.id ? "Mentés..." : offlineIds.has(quiz.id) ? "Offline törlése" : "Offline letöltés"}
+              </button>
               {quiz.allow_reshare && (
                 <button
                   onClick={() => handleReshare(quiz)}

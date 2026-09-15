@@ -4,6 +4,14 @@ import { claimTopic, createTopic, deleteTopic, getTopics, Topic } from "../api/t
 import { Link } from "react-router-dom";
 import { TopicShareModal } from "./TopicShareModal";
 
+const topicColors = [
+  "#FF6B35", "#F4511E", "#E53935", "#D81B60", "#8E24AA", "#5E35B1",
+  "#3949AB", "#1E88E5", "#039BE5", "#00ACC1", "#00897B", "#43A047",
+  "#7CB342", "#C0CA33", "#FDD835", "#FFB300", "#FB8C00", "#6D4C41",
+  "#546E7A", "#455A64", "#6C5CE7", "#00B894", "#0984E3", "#E17055",
+  "#E84393", "#2D3436", "#A3CB38", "#12CBC4", "#FDA7DF", "#B53471",
+];
+
 export const TopicsPanel = () => {
   const { user } = useAuth();
   const isTeacher = user?.role === "teacher";
@@ -12,7 +20,7 @@ export const TopicsPanel = () => {
   const [description, setDescription] = useState("");
   const [subject, setSubject] = useState("");
   const [grade, setGrade] = useState("");
-  const [color, setColor] = useState("");
+  const [color, setColor] = useState(topicColors[0]);
   const [shareTopic, setShareTopic] = useState<Topic | null>(null);
   const [claimValue, setClaimValue] = useState("");
   const [status, setStatus] = useState<string | null>(null);
@@ -28,13 +36,18 @@ export const TopicsPanel = () => {
 
   const handleCreate = async () => {
     if (!name.trim()) return;
-    await createTopic({ name, description, subject, grade, color });
-    setName("");
-    setDescription("");
-    setSubject("");
-    setGrade("");
-    setColor("");
-    await load();
+    try {
+      await createTopic({ name, description, subject, grade: isTeacher ? grade : undefined, color });
+      setName("");
+      setDescription("");
+      setSubject("");
+      setGrade("");
+      setColor(topicColors[0]);
+      setStatus("A téma elkészült.");
+      await load();
+    } catch (error: any) {
+      setStatus(error?.message ?? "Nem sikerült létrehozni a témát.");
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -62,12 +75,11 @@ export const TopicsPanel = () => {
       <div className="section-header">
         <div>
           <h3>Témák</h3>
-          <p className="section-help">Egy téma közös polcra rendezi a hozzá tartozó kvízeket és kártyapackeket. Megosztáskor a teljes tanulási egység eljut a diákhoz.</p>
+          <p className="section-help">Egy téma közös polcra rendezi a hozzá tartozó kvízeket és Flashcards csomagokat. Megosztáskor a teljes tanulási egység eljut a címzetthez.</p>
         </div>
       </div>
 
-      {isTeacher && (
-        <div className="topic-create">
+      <div className="topic-create">
           <div className="input-group">
             <label>Téma neve</label>
             <input value={name} onChange={(e) => setName(e.target.value)} />
@@ -80,19 +92,31 @@ export const TopicsPanel = () => {
             <label>Tantárgy</label>
             <input value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
-          <div className="input-group">
-            <label>Évfolyam</label>
+          {isTeacher && <div className="input-group">
+            <label>Évfolyam (opcionális)</label>
             <input value={grade} onChange={(e) => setGrade(e.target.value)} />
-          </div>
-          <div className="input-group">
-            <label>Szín (opcionális)</label>
-            <input value={color} onChange={(e) => setColor(e.target.value)} placeholder="#FF6B35" />
+          </div>}
+          <div className="input-group topic-color-field">
+            <label>Téma színe</label>
+            <div className="topic-color-palette" role="radiogroup" aria-label="Téma színe">
+              {topicColors.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  role="radio"
+                  aria-checked={color === option}
+                  aria-label={option}
+                  className={color === option ? "selected" : ""}
+                  style={{ backgroundColor: option }}
+                  onClick={() => setColor(option)}
+                />
+              ))}
+            </div>
           </div>
           <button className="btn btn-primary btn-sm" type="button" onClick={handleCreate}>
             + Téma létrehozása
           </button>
         </div>
-      )}
 
       {!isTeacher && (
         <div className="topic-claim">
@@ -106,17 +130,18 @@ export const TopicsPanel = () => {
           {status && <div className="inline-status">{status}</div>}
         </div>
       )}
+      {isTeacher && status && <div className="inline-status">{status}</div>}
 
       <div className="topic-list">
         {topics.map((t) => (
-          <div key={t.id} className="topic-row">
+          <div key={t.id} className="topic-row" style={{ borderLeftColor: t.color ?? topicColors[0] }}>
             <div>
               <div className="topic-title">{t.name}</div>
               <div className="topic-meta">
                 {t.subject ? `${t.subject} · ` : ""}{t.grade ?? ""}
               </div>
             </div>
-            {isTeacher && (
+            {t.is_owner && (
               <div className="topic-actions">
                 <Link className="btn btn-secondary btn-sm" to={`/topics/${t.id}`}>
                   Megnyitás
@@ -129,7 +154,7 @@ export const TopicsPanel = () => {
                 </button>
               </div>
             )}
-            {!isTeacher && (
+            {!t.is_owner && (
               <div className="topic-actions">
                 <Link className="btn btn-secondary btn-sm" to={`/topics/${t.id}`}>
                   Megnyitás

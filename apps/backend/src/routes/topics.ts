@@ -17,27 +17,16 @@ const TopicSchema = z.object({
 
 topicsRouter.get("/", requireAuth, async (req: any, res) => {
   const userId = req.user?.sub;
-  const role = req.user?.role;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   try {
-    if (role === "teacher") {
-      const r = await pool.query(
-        `SELECT id, name, description, subject, grade, color, created_at
-         FROM topics
-         WHERE owner_id=$1
-         ORDER BY created_at DESC`,
-        [userId]
-      );
-      return res.json(r.rows);
-    }
-
     const r = await pool.query(
-      `SELECT t.id, t.name, t.description, t.subject, t.grade, t.color, t.created_at
-       FROM topic_shares s
-       JOIN topics t ON t.id = s.topic_id
-       WHERE s.recipient_id = $1
-       ORDER BY s.created_at DESC`,
+      `SELECT DISTINCT t.id, t.name, t.description, t.subject, t.grade, t.color, t.created_at,
+              (t.owner_id=$1) AS is_owner
+       FROM topics t
+       LEFT JOIN topic_shares s ON s.topic_id=t.id AND s.recipient_id=$1
+       WHERE t.owner_id=$1 OR s.id IS NOT NULL
+       ORDER BY t.created_at DESC`,
       [userId]
     );
     return res.json(r.rows);
@@ -49,28 +38,17 @@ topicsRouter.get("/", requireAuth, async (req: any, res) => {
 
 topicsRouter.get("/:id", requireAuth, async (req: any, res) => {
   const userId = req.user?.sub;
-  const role = req.user?.role;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
 
   try {
-    if (role === "teacher") {
-      const r = await pool.query(
-        `SELECT id, name, description, subject, grade, color, created_at
-         FROM topics
-         WHERE id=$1 AND owner_id=$2`,
-        [id, userId]
-      );
-      if (r.rowCount === 0) return res.status(404).json({ error: "Not found" });
-      return res.json(r.rows[0]);
-    }
-
     const r = await pool.query(
-      `SELECT t.id, t.name, t.description, t.subject, t.grade, t.color, t.created_at
-       FROM topic_shares s
-       JOIN topics t ON t.id = s.topic_id
-       WHERE s.recipient_id=$1 AND t.id=$2`,
-      [userId, id]
+      `SELECT DISTINCT t.id, t.name, t.description, t.subject, t.grade, t.color, t.created_at,
+              (t.owner_id=$2) AS is_owner
+       FROM topics t
+       LEFT JOIN topic_shares s ON s.topic_id=t.id AND s.recipient_id=$2
+       WHERE t.id=$1 AND (t.owner_id=$2 OR s.id IS NOT NULL)`,
+      [id, userId]
     );
     if (r.rowCount === 0) return res.status(404).json({ error: "Not found" });
     const offset = Number(req.headers["x-timezone-offset"] ?? 0);
@@ -108,7 +86,7 @@ topicsRouter.get("/:id/stats", requireAuth, requireRole("teacher"), async (req: 
   }
 });
 
-topicsRouter.post("/", requireAuth, requireRole("teacher"), async (req: any, res) => {
+topicsRouter.post("/", requireAuth, async (req: any, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -123,7 +101,7 @@ topicsRouter.post("/", requireAuth, requireRole("teacher"), async (req: any, res
         body.name.trim(),
         body.description ?? null,
         body.subject ?? null,
-        body.grade ?? null,
+        req.user.role === "teacher" ? body.grade ?? null : null,
         body.color ?? null,
       ]
     );
@@ -134,7 +112,7 @@ topicsRouter.post("/", requireAuth, requireRole("teacher"), async (req: any, res
   }
 });
 
-topicsRouter.put("/:id", requireAuth, requireRole("teacher"), async (req: any, res) => {
+topicsRouter.put("/:id", requireAuth, async (req: any, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -168,7 +146,7 @@ topicsRouter.put("/:id", requireAuth, requireRole("teacher"), async (req: any, r
   }
 });
 
-topicsRouter.delete("/:id", requireAuth, requireRole("teacher"), async (req: any, res) => {
+topicsRouter.delete("/:id", requireAuth, async (req: any, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -184,7 +162,7 @@ topicsRouter.delete("/:id", requireAuth, requireRole("teacher"), async (req: any
 });
 
 // Share topic
-topicsRouter.post("/:id/share", requireAuth, requireRole("teacher"), async (req: any, res) => {
+topicsRouter.post("/:id/share", requireAuth, async (req: any, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params);

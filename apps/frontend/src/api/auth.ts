@@ -23,3 +23,15 @@ export function loginApi(identifier: string, password: string) {
     body: JSON.stringify({ identifier, password }),
   });
 }
+
+export function updateProfileApi(data: {
+  username: string;
+  email: string;
+  current_password: string;
+  new_password?: string;
+}) {
+  return api<{ token: string; user: AuthUser }>("/api/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}

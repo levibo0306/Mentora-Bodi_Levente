@@ -69,7 +69,7 @@ const Dashboard = () => {
                 Eredmények
               </Link>
               <Link to="/flashcards" className="btn btn-secondary btn-sm">
-                Kártyapackek
+                Flashcards
               </Link>
             </div>
           </div>
@@ -78,7 +78,7 @@ const Dashboard = () => {
         {!isStudent && <TopicsPanel />}
 
         <div className="section-header">
-          <h2 className="section-title">{isStudent && activeTab === "flashcards" ? "Kártyapackjeim" : isStudent ? "Tanulóterem" : "Saját kvízeim"}</h2>
+          <h2 className="section-title">{isStudent && activeTab === "flashcards" ? "Flashcards" : isStudent ? "Tanulóterem" : "Saját kvízeim"}</h2>
           
           {(!isStudent || activeTab === "own") && <button className="btn btn-primary btn-sm" onClick={handleCreateClick}>
               + Új Kvíz
@@ -101,7 +101,7 @@ const Dashboard = () => {
               }}
               className={`tab ${activeTab === 'flashcards' ? "active" : ""}`}
             >
-              🗂️ Kártyapackek
+              🗂️ Flashcards
             </button>
             <button
               onClick={() => setActiveTab('shared')}
@@ -134,8 +134,8 @@ const Dashboard = () => {
             <SharedWithMe key={`shared-${refreshKey}`} />
           ) : activeTab === 'add' ? (
             <SharedAdd
-              onAdded={() => {
-                setActiveTab("shared");
+              onAdded={(destination) => {
+                setActiveTab(destination);
                 setRefreshKey((prev) => prev + 1);
               }}
             />

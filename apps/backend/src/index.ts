@@ -13,7 +13,7 @@ import { topicsRouter } from "./routes/topics";
 import { feedbackRouter } from "./routes/feedback";
 
 
-const app = express();
+export const app = express();
 
 app.use(
   cors({
@@ -67,5 +67,7 @@ app.use((err: any, _req: any, res: any, _next: any) => {
   res.status(500).json({ error: err?.message ?? "server error" });
 });
 
-const port = Number(process.env.PORT ?? 3001);
-app.listen(port, () => console.log(`API listening on http://localhost:${port}`));
+if (process.env.NODE_ENV !== "test") {
+  const port = Number(process.env.PORT ?? 3001);
+  app.listen(port, () => console.log(`API listening on http://localhost:${port}`));
+}

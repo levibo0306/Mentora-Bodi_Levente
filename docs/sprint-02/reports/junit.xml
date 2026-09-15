@@ -1,23 +1,47 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="sprint2-tests" tests="5" failures="0" errors="0" time="0.00903775">
-    <testsuite name="sprints/02/tests/unit/error_handler.spec.ts" timestamp="2025-12-01T18:23:35.380Z" hostname="192.168.1.74" tests="1" failures="0" errors="0" skipped="0" time="0.00155875">
-        <testcase classname="sprints/02/tests/unit/error_handler.spec.ts" name="error handler &gt; returns a readable error message" time="0.000709209">
+<testsuites name="sprint2-tests" tests="14" failures="0" errors="0" time="0.78">
+    <testsuite name="tests/unit/error_handler.spec.ts" timestamp="2026-09-15T19:07:06.180Z" hostname="192.168.1.66" tests="1" failures="0" errors="0" skipped="0" time="0.003">
+        <testcase classname="tests/unit/error_handler.spec.ts" name="error handler &gt; returns a readable error message" time="0.001">
         </testcase>
     </testsuite>
-    <testsuite name="sprints/02/tests/unit/form_validation.spec.ts" timestamp="2025-12-01T18:23:35.380Z" hostname="192.168.1.74" tests="1" failures="0" errors="0" skipped="0" time="0.001683417">
-        <testcase classname="sprints/02/tests/unit/form_validation.spec.ts" name="form validation &gt; invalid if title missing" time="0.000850958">
+    <testsuite name="tests/unit/form_validation.spec.ts" timestamp="2026-09-15T19:07:06.182Z" hostname="192.168.1.66" tests="1" failures="0" errors="0" skipped="0" time="0.001">
+        <testcase classname="tests/unit/form_validation.spec.ts" name="form validation &gt; invalid if title missing" time="0.001">
         </testcase>
     </testsuite>
-    <testsuite name="sprints/02/tests/unit/list_state.spec.ts" timestamp="2025-12-01T18:23:35.380Z" hostname="192.168.1.74" tests="1" failures="0" errors="0" skipped="0" time="0.00150175">
-        <testcase classname="sprints/02/tests/unit/list_state.spec.ts" name="list state &gt; empty array triggers empty UI state" time="0.000706292">
+    <testsuite name="tests/unit/list_state.spec.ts" timestamp="2026-09-15T19:07:06.183Z" hostname="192.168.1.66" tests="1" failures="0" errors="0" skipped="0" time="0.019">
+        <testcase classname="tests/unit/list_state.spec.ts" name="list state &gt; empty array triggers empty UI state" time="0.007">
         </testcase>
     </testsuite>
-    <testsuite name="sprints/02/tests/unit/quiz_logic.spec.ts" timestamp="2025-12-01T18:23:35.381Z" hostname="192.168.1.74" tests="1" failures="0" errors="0" skipped="0" time="0.00240675">
-        <testcase classname="sprints/02/tests/unit/quiz_logic.spec.ts" name="quizLogic &gt; returns error when title is empty" time="0.000801833">
+    <testsuite name="tests/unit/metrics.spec.ts" timestamp="2026-09-15T19:07:06.184Z" hostname="192.168.1.66" tests="2" failures="0" errors="0" skipped="0" time="0.002">
+        <testcase classname="tests/unit/metrics.spec.ts" name="metrics &gt; tracks requests ok/fail" time="0.002">
+        </testcase>
+        <testcase classname="tests/unit/metrics.spec.ts" name="metrics &gt; tracks created quizzes" time="0">
         </testcase>
     </testsuite>
-    <testsuite name="sprints/02/tests/unit/utils.spec.ts" timestamp="2025-12-01T18:23:35.381Z" hostname="192.168.1.74" tests="1" failures="0" errors="0" skipped="0" time="0.001887083">
-        <testcase classname="sprints/02/tests/unit/utils.spec.ts" name="utils &gt; should format title" time="0.000745417">
+    <testsuite name="tests/unit/offline_flashcards.spec.ts" timestamp="2026-09-15T19:07:06.185Z" hostname="192.168.1.66" tests="2" failures="0" errors="0" skipped="0" time="0.004">
+        <testcase classname="tests/unit/offline_flashcards.spec.ts" name="offline Flashcards &gt; stores a pack and updates its local repetition schedule" time="0.001">
+        </testcase>
+        <testcase classname="tests/unit/offline_flashcards.spec.ts" name="offline Flashcards &gt; sends queued reviews when the connection returns" time="0.002">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/quiz_logic.spec.ts" timestamp="2026-09-15T19:07:06.186Z" hostname="192.168.1.66" tests="1" failures="0" errors="0" skipped="0" time="0.001">
+        <testcase classname="tests/unit/quiz_logic.spec.ts" name="quizLogic &gt; returns error when title is empty" time="0.001">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/quizzes_repo.spec.ts" timestamp="2026-09-15T19:07:06.188Z" hostname="192.168.1.66" tests="5" failures="0" errors="0" skipped="0" time="0.007">
+        <testcase classname="tests/unit/quizzes_repo.spec.ts" name="quizzesRepo &gt; loads quizzes from the API" time="0.004">
+        </testcase>
+        <testcase classname="tests/unit/quizzes_repo.spec.ts" name="quizzesRepo &gt; returns an empty list for an API error" time="0.001">
+        </testcase>
+        <testcase classname="tests/unit/quizzes_repo.spec.ts" name="quizzesRepo &gt; returns an empty list for a non-array response" time="0">
+        </testcase>
+        <testcase classname="tests/unit/quizzes_repo.spec.ts" name="quizzesRepo &gt; keeps saveQuizzes as an API-storage compatibility no-op" time="0">
+        </testcase>
+        <testcase classname="tests/unit/quizzes_repo.spec.ts" name="quizzesRepo &gt; rejects clearing all API-backed quizzes" time="0">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/utils.spec.ts" timestamp="2026-09-15T19:07:06.192Z" hostname="192.168.1.66" tests="1" failures="0" errors="0" skipped="0" time="0.002">
+        <testcase classname="tests/unit/utils.spec.ts" name="utils &gt; should format title" time="0.001">
         </testcase>
     </testsuite>
 </testsuites>

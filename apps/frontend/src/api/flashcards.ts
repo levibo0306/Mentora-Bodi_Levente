@@ -23,3 +23,10 @@ export const deleteFlashcardPack = (id: string) => api(`/api/flashcards/packs/${
 export const getFlashcardPackStats = (id: string) => api<Array<{
   student_id: string; username: string; email: string; cards_seen: number; reviews: number; success_rate: number; last_studied: string;
 }>>(`/api/flashcards/packs/${id}/stats`);
+export const shareFlashcardPack = (id: string, recipients?: string[]) =>
+  api<{ tokens: Array<{ token: string; recipient_email?: string }> }>(`/api/flashcards/packs/${id}/share`, {
+    method: "POST",
+    body: JSON.stringify({ recipients: recipients?.length ? recipients : undefined }),
+  });
+export const claimFlashcardPack = (token: string) =>
+  api<{ token: string }>("/api/flashcards/share/claim", { method: "POST", body: JSON.stringify({ token }) });

@@ -10,6 +10,8 @@ export interface Quiz {
   description?: string;
   mode: 'practice' | 'assessment';
   topic_id?: string | null;
+  owner_id?: string | null;
+  is_owner?: boolean;
   difficulty?: number;      // Ez maradjon meg a biztonság kedvéért
   avg_difficulty?: number | string | null;
   question_count?: number;
@@ -50,7 +52,11 @@ export type QuizQuestion = {
   prompt: string;
   options: string[];
   correct_index: number;
+  explanation?: string | null;
+  difficulty?: number;
 };
+
+export type AdaptiveQuizQuestion = Omit<QuizQuestion, "correct_index"> & { correct_index?: number };
 
 export type QuizAttempt = {
   id: string;
@@ -83,9 +89,27 @@ export async function getQuizzes(topicId?: string | null) {
   return api<Quiz[]>(`/api/quizzes${qs}`);
 }
 
+export const getImportableQuizzes = () => api<Quiz[]>("/api/quizzes/importable");
+
 // Egy kvíz lekérése
 export async function getQuiz(id: string) {
   return api<Quiz>(`/api/quizzes/${id}`);
+}
+
+export async function getQuizQuestions(id: string) {
+  const questions = await api<QuizQuestion[]>(`/api/quizzes/${id}/questions`);
+  return questions.map((question) => ({
+    ...question,
+    options: typeof question.options === "string" ? JSON.parse(question.options) : question.options,
+  }));
+}
+
+export async function getAdaptiveQuizQuestions(id: string, limit = 10) {
+  const questions = await api<AdaptiveQuizQuestion[]>(`/api/quizzes/${id}/adaptive-questions?limit=${limit}`);
+  return questions.map((question) => ({
+    ...question,
+    options: typeof question.options === "string" ? JSON.parse(question.options) : question.options,
+  }));
 }
 
 // Kvíz létrehozása
@@ -136,6 +160,22 @@ export async function generateQuestionsAI(text: string, count: number, signal?: 
   return api<CreateQuestionDto[]>("/api/quizzes/generate-ai", {
     method: "POST",
     body: JSON.stringify({ text, count }),
+    signal,
+  });
+}
+
+export type DocumentGenerationResult = {
+  questions: CreateQuestionDto[];
+  source: { filename: string; characters: number; truncated: boolean };
+};
+
+export async function generateQuestionsFromDocument(file: File, count: number, signal?: AbortSignal) {
+  const body = new FormData();
+  body.append("file", file);
+  body.append("count", String(count));
+  return api<DocumentGenerationResult>("/api/quizzes/generate-ai-file", {
+    method: "POST",
+    body,
     signal,
   });
 }

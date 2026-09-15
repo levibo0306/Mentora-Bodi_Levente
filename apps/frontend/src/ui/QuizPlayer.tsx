@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getQuiz, submitQuizAttempt, QuizResult } from "../api/quizzes";
-import { api } from "../api/http";
+import { getAdaptiveQuizQuestions, submitQuizAttempt, QuizResult } from "../api/quizzes";
+import { getOfflineQuiz, queueOfflineAttempt } from "../infra/offlineQuizzes";
 
 type Question = {
   id: string;
   prompt: string;
   options: string[];
+  correct_index?: number;
 };
 
 export const QuizPlayer = () => {
@@ -18,19 +19,23 @@ export const QuizPlayer = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<QuizResult | null>(null);
+  const [offline, setOffline] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     if (!id) return;
     
-    api<any[]>(`/api/quizzes/${id}/questions`)
-      .then((data) => {
-        const parsed = data.map(q => ({
-          ...q,
-          options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options
-        }));
-        setQuestions(parsed);
+    getAdaptiveQuizQuestions(id)
+      .then((data) => setQuestions(data))
+      .catch(() => {
+        const downloaded = getOfflineQuiz(id);
+        if (downloaded) {
+          setQuestions(downloaded.questions);
+          setOffline(true);
+          return;
+        }
+        setLoadError("A kvíz nem érhető el. Kapcsolódj az internethez, vagy töltsd le előre offline használatra.");
       })
-      .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -51,6 +56,13 @@ export const QuizPlayer = () => {
     if (!id) return;
     try {
       setLoading(true);
+      if (offline) {
+        const correct = questions.filter((question) => answers[question.id] === question.correct_index).length;
+        const score = questions.length ? Math.round((correct / questions.length) * 100) : 0;
+        queueOfflineAttempt(id, answers);
+        setResult({ score, correct, total: questions.length });
+        return;
+      }
       const res = await submitQuizAttempt(id, answers);
       setResult(res);
     } catch (e) {
@@ -78,9 +90,9 @@ export const QuizPlayer = () => {
     return (
       <div className="result-card">
         <div style={{ fontSize: '64px', marginBottom: '20px' }}>📝</div>
-        <h3 style={{ fontSize: '24px', marginBottom: '12px' }}>Ez a kvíz még üres!</h3>
+        <h3 style={{ fontSize: '24px', marginBottom: '12px' }}>{loadError ? "A kvíz nem tölthető be" : "Ez a kvíz még üres!"}</h3>
         <p style={{ color: '#666', marginBottom: '30px' }}>
-          Még nincsenek kérdések ebben a kvízben.
+          {loadError || "Még nincsenek kérdések ebben a kvízben."}
         </p>
         <button onClick={() => navigate('/')} className="btn btn-primary">
           Vissza a főoldalra
@@ -117,6 +129,7 @@ export const QuizPlayer = () => {
         <div className="result-details">
           {result.correct} / {result.total} helyes válasz
         </div>
+        {offline && <p className="offline-note">Offline kitöltés. Az eredmény internetkapcsolatkor automatikusan szinkronizálódik.</p>}
 
         <button 
           onClick={() => navigate('/')} 
@@ -155,6 +168,8 @@ export const QuizPlayer = () => {
           Kilépés
         </button>
       </div>
+      {offline && <div className="offline-banner">Offline mód</div>}
+      {!offline && <div className="adaptive-banner">Személyre szabott gyakorlás · a kérdéssor a korábbi eredményeidhez igazodik</div>}
 
       {/* Kérdés Kártya */}
       <div className="question-card">

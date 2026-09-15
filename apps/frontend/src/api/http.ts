@@ -18,7 +18,8 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const headers = new Headers(init.headers);
-    if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+    const isFormData = typeof FormData !== "undefined" && init.body instanceof FormData;
+    if (!headers.has("Content-Type") && !isFormData) headers.set("Content-Type", "application/json");
     const token = localStorage.getItem("mentora_token");
     if (token) headers.set("Authorization", `Bearer ${token}`);
     if (!headers.has("X-Timezone-Offset")) headers.set("X-Timezone-Offset", String(new Date().getTimezoneOffset()));

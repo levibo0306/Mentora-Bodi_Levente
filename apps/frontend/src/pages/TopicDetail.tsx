@@ -55,7 +55,7 @@ export const TopicDetail = () => {
       </div>
 
       <div className="topic-section">
-        <h3>Tanulókártyák</h3>
+        <h3>Flashcards</h3>
         <Flashcards topicId={topic.id} />
       </div>
     </PageLayout>

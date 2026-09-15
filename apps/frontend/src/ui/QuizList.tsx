@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getQuizzes, Quiz, deleteQuiz } from "../api/quizzes";
+import { getQuiz, getQuizQuestions, getQuizzes, Quiz, deleteQuiz } from "../api/quizzes";
 import { getTopics, Topic } from "../api/topics";
 import { ShareModal } from "./ShareModal";
+import { listOfflineQuizzes, removeOfflineQuiz, saveOfflineQuiz } from "../infra/offlineQuizzes";
 
 interface Props {
   onEdit: (id: string) => void;
@@ -32,6 +33,9 @@ export const QuizList = ({ onEdit, topicId: fixedTopicId = null, hideFilter = fa
   const [loading, setLoading] = useState(true);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [topicId, setTopicId] = useState<string | null>(fixedTopicId);
+  const [offlineIds, setOfflineIds] = useState(() => new Set(listOfflineQuizzes().map((item) => item.quiz.id)));
+  const [offlineBusyId, setOfflineBusyId] = useState("");
+  const [offlineStatus, setOfflineStatus] = useState("");
   
   // Share modal state
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -86,16 +90,33 @@ export const QuizList = ({ onEdit, topicId: fixedTopicId = null, hideFilter = fa
     setShareModalOpen(true);
   };
 
-  if (loading) return <div className="loading">Betöltés...</div>;
+  const toggleOffline = async (quiz: Quiz) => {
+    setOfflineBusyId(quiz.id);
+    setOfflineStatus("");
+    try {
+      if (offlineIds.has(quiz.id)) {
+        removeOfflineQuiz(quiz.id);
+        setOfflineIds((ids) => {
+          const next = new Set(ids);
+          next.delete(quiz.id);
+          return next;
+        });
+        setOfflineStatus(`A(z) „${quiz.title}” offline példánya törölve.`);
+      } else {
+        const [details, questions] = await Promise.all([getQuiz(quiz.id), getQuizQuestions(quiz.id)]);
+        if (questions.length === 0) throw new Error("Üres kvízt nem lehet letölteni.");
+        saveOfflineQuiz({ ...quiz, ...details }, questions);
+        setOfflineIds((ids) => new Set(ids).add(quiz.id));
+        setOfflineStatus(`A(z) „${quiz.title}” internet nélkül is kitölthető.`);
+      }
+    } catch (error: any) {
+      setOfflineStatus(error?.message ?? "Nem sikerült letölteni a kvízt.");
+    } finally {
+      setOfflineBusyId("");
+    }
+  };
 
-  if (quizzes.length === 0) {
-    return (
-      <div className="empty-state">
-        <div style={{ fontSize: "48px", marginBottom: "20px" }}>📚</div>
-        <p>Még nincs kvízed. Kezdj el egyet létrehozni!</p>
-      </div>
-    );
-  }
+  if (loading) return <div className="loading">Betöltés...</div>;
 
   return (
     <>
@@ -112,7 +133,13 @@ export const QuizList = ({ onEdit, topicId: fixedTopicId = null, hideFilter = fa
           </select>
         </div>
       )}
-      <div className="quiz-grid">
+      {offlineStatus && <div className="inline-status success offline-status">{offlineStatus}</div>}
+      {quizzes.length === 0 ? (
+        <div className="empty-state">
+          <div style={{ fontSize: "48px", marginBottom: "20px" }}>📚</div>
+          <p>{topicId ? "Ebben a témában még nincs kvíz. Válassz másik témát, vagy hozz létre egyet!" : "Még nincs kvízed. Kezdj el egyet létrehozni!"}</p>
+        </div>
+      ) : <div className="quiz-grid">
         {quizzes.map((quiz) => {
           const diff = getDifficultyStyle((quiz as any).avg_difficulty);
 
@@ -170,39 +197,47 @@ export const QuizList = ({ onEdit, topicId: fixedTopicId = null, hideFilter = fa
                   >
                     ▶ Indítás
                   </Link>
-                  <button 
-                    onClick={() => handleShare(quiz)} 
-                    className="btn"
-                    style={{ 
-                      flex: '1 1 calc(50% - 5px)',
-                      minWidth: '120px',
-                      background: 'linear-gradient(135deg, var(--success), #00d4aa)',
-                      color: 'white',
-                      boxShadow: '0 4px 15px rgba(6, 214, 160, 0.2)'
-                    }}
-                  >
-                    📤 Megosztás
-                  </button>
-                  <button 
-                    onClick={() => onEdit(quiz.id)} 
+                  {quiz.is_owner !== false && <button
+                      onClick={() => handleShare(quiz)}
+                      className="btn"
+                      style={{
+                        flex: '1 1 calc(50% - 5px)',
+                        minWidth: '120px',
+                        background: 'linear-gradient(135deg, var(--success), #00d4aa)',
+                        color: 'white',
+                        boxShadow: '0 4px 15px rgba(6, 214, 160, 0.2)'
+                      }}
+                    >
+                      📤 Megosztás
+                    </button>}
+                  <button
+                    onClick={() => toggleOffline(quiz)}
                     className="btn btn-secondary"
+                    disabled={offlineBusyId === quiz.id}
                     style={{ flex: '1 1 calc(50% - 5px)', minWidth: '120px' }}
                   >
-                    ✏️ Szerkesztés
+                    {offlineBusyId === quiz.id ? "Mentés..." : offlineIds.has(quiz.id) ? "Offline törlése" : "Offline letöltés"}
                   </button>
-                  <button 
-                    onClick={() => handleDelete(quiz.id)} 
-                    className="btn btn-danger-soft"
-                    style={{ flex: '1 1 calc(50% - 5px)', minWidth: '120px' }}
-                  >
-                    🗑️ Törlés
-                  </button>
+                  {quiz.is_owner !== false && <button
+                      onClick={() => onEdit(quiz.id)}
+                      className="btn btn-secondary"
+                      style={{ flex: '1 1 calc(50% - 5px)', minWidth: '120px' }}
+                    >
+                      ✏️ Szerkesztés
+                    </button>}
+                  {quiz.is_owner !== false && <button
+                      onClick={() => handleDelete(quiz.id)}
+                      className="btn btn-danger-soft"
+                      style={{ flex: '1 1 calc(50% - 5px)', minWidth: '120px' }}
+                    >
+                      🗑️ Törlés
+                    </button>}
                 </div>
               </div>
             </div>
           );
         })}
-      </div>
+      </div>}
 
       {/* Share Modal */}
       {selectedQuiz && (

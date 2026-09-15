@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 // Importáljuk a típusokat és az API hívókat
-import { loginApi, registerApi, type AuthUser, type UserRole } from "../api/auth";
+import { loginApi, registerApi, updateProfileApi, type AuthUser, type UserRole } from "../api/auth";
 
 type AuthContextType = {
   user: AuthUser | null;
@@ -10,6 +10,7 @@ type AuthContextType = {
   // A login/register itt email/jelszót vár!
   login: (identifier: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string, role: UserRole) => Promise<void>;
+  updateProfile: (data: { username: string; email: string; current_password: string; new_password?: string }) => Promise<void>;
   logout: () => void;
 };
 
@@ -59,6 +60,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     persist(data.token, data.user);
   };
 
+  const updateProfile = async (data: { username: string; email: string; current_password: string; new_password?: string }) => {
+    const result = await updateProfileApi(data);
+    persist(result.token, result.user);
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -72,6 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       token,
       login, 
       register,
+      updateProfile,
       logout, 
       isAuthenticated: !!user,
       isLoading 

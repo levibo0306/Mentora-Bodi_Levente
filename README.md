@@ -58,7 +58,7 @@ OLLAMA_TIMEOUT_MS=120000
 OLLAMA_NUM_CTX=4096
 ```
 
-A kvízkészítő második lépésében illeszd be a tananyagot, válaszd ki a kérdésszámot, majd ellenőrizd a listába kerülő kérdéseket mentés előtt.
+A kvízkészítő második lépésében illeszd be a tananyagot, vagy tölts fel egy legfeljebb 8 MB-os PDF/DOCX dokumentumot. Válaszd ki a kérdésszámot, majd ellenőrizd a listába kerülő kérdéseket mentés előtt. Szkennelt, szövegréteg nélküli PDF-hez előzetes OCR szükséges; 7000 karakternél hosszabb dokumentumból az első 7000 karakter kerül az AI-hoz.
 
 ### Backend indítás
 Az adatbázisséma első betöltése után hozd létre a tesztfiókokat:
@@ -99,6 +99,22 @@ A frontend alapértelmezetten: `http://localhost:5173`
 Frontend tesztek:
 ```bash
 npm run test:frontend
+```
+
+Backend és böngészős E2E tesztek:
+```bash
+npm run test:backend
+npm run test:e2e
+```
+
+Az E2E tesztek első CI-futtatása előtt telepítsd a Playwright Chromiumot:
+```bash
+npx playwright install chromium
+```
+
+Az összes teszt egymás után:
+```bash
+npm run test:all
 ```
 
 CI-szerű futtatás coverage-zel:

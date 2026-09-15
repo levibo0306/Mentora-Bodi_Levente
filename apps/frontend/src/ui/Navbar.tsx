@@ -21,7 +21,7 @@ export const Navbar: React.FC = () => {
 
       <div className="nav-actions">
         <Link to="/flashcards" className="btn btn-secondary" style={{ padding: "8px 14px", textDecoration: "none" }}>
-          Kártyák
+          Flashcards
         </Link>
         <Link to="/feedback" className="btn btn-secondary" style={{ padding: "8px 14px", textDecoration: "none" }}>
           Visszajelzések

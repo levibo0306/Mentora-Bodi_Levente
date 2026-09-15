@@ -127,8 +127,8 @@ usersRouter.get("/me/overview", requireAuth, async (req: any, res) => {
       {
         id: "pack_explorer",
         icon: "🗂️",
-        name: "Packfelfedező",
-        requirement: "Gyakorolj 3 különböző packet",
+        name: "Flashcards-felfedező",
+        requirement: "Gyakorolj 3 különböző Flashcards csomagot",
         earned: learning.packs_studied >= 3,
       },
       {

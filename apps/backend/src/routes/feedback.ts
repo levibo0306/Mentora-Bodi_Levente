@@ -17,11 +17,37 @@ async function resolvePair(user: any, partnerId: string) {
     `SELECT 1 WHERE
        EXISTS (SELECT 1 FROM topic_shares ts JOIN topics t ON t.id=ts.topic_id WHERE ts.recipient_id=$2 AND t.owner_id=$1)
        OR EXISTS (SELECT 1 FROM quiz_shares qs JOIN quizzes q ON q.id=qs.quiz_id WHERE qs.recipient_id=$2 AND q.owner_id=$1)
+       OR EXISTS (SELECT 1 FROM flashcard_shares fs JOIN flashcard_packs p ON p.id=fs.pack_id WHERE fs.recipient_id=$2 AND p.owner_id=$1)
        OR EXISTS (SELECT 1 FROM attempts a JOIN quizzes q ON q.id=a.quiz_id WHERE a.user_id=$2 AND q.owner_id=$1)
        OR EXISTS (SELECT 1 FROM feedback_messages f WHERE f.teacher_id=$1 AND f.student_id=$2)`,
     [pair.teacherId, pair.studentId]
   );
   return relation.rowCount ? pair : null;
+}
+
+async function getFeedbackTargets(pair: { teacherId: string; studentId: string }) {
+  return (await pool.query(
+    `SELECT 'topic' AS type,t.id,t.name AS title
+     FROM topics t JOIN topic_shares ts ON ts.topic_id=t.id
+     WHERE t.owner_id=$1 AND ts.recipient_id=$2
+     UNION
+     SELECT 'quiz' AS type,q.id,q.title
+     FROM quizzes q
+     WHERE q.owner_id=$1 AND (
+       EXISTS (SELECT 1 FROM quiz_shares qs WHERE qs.quiz_id=q.id AND qs.recipient_id=$2)
+       OR EXISTS (SELECT 1 FROM topic_shares ts WHERE ts.topic_id=q.topic_id AND ts.recipient_id=$2)
+       OR EXISTS (SELECT 1 FROM attempts a WHERE a.quiz_id=q.id AND a.user_id=$2)
+     )
+     UNION
+     SELECT 'flashcards' AS type,p.id,p.title
+     FROM flashcard_packs p
+     WHERE p.owner_id=$1 AND (
+       EXISTS (SELECT 1 FROM topic_shares ts WHERE ts.topic_id=p.topic_id AND ts.recipient_id=$2)
+       OR EXISTS (SELECT 1 FROM flashcard_shares fs WHERE fs.pack_id=p.id AND fs.recipient_id=$2)
+     )
+     ORDER BY type,title`,
+    [pair.teacherId, pair.studentId]
+  )).rows as Array<{ type: "topic" | "quiz" | "flashcards"; id: string; title: string }>;
 }
 
 feedbackRouter.get("/contacts", requireAuth, async (req: any, res) => {
@@ -34,6 +60,7 @@ feedbackRouter.get("/contacts", requireAuth, async (req: any, res) => {
            FROM users u WHERE u.role='student' AND (
              EXISTS (SELECT 1 FROM topic_shares ts JOIN topics t ON t.id=ts.topic_id WHERE ts.recipient_id=u.id AND t.owner_id=$1)
              OR EXISTS (SELECT 1 FROM quiz_shares qs JOIN quizzes q ON q.id=qs.quiz_id WHERE qs.recipient_id=u.id AND q.owner_id=$1)
+             OR EXISTS (SELECT 1 FROM flashcard_shares fs JOIN flashcard_packs p ON p.id=fs.pack_id WHERE fs.recipient_id=u.id AND p.owner_id=$1)
              OR EXISTS (SELECT 1 FROM attempts a JOIN quizzes q ON q.id=a.quiz_id WHERE a.user_id=u.id AND q.owner_id=$1)
              OR EXISTS (SELECT 1 FROM feedback_messages f WHERE f.teacher_id=$1 AND f.student_id=u.id)
            ) ORDER BY u.username`, [userId])
@@ -42,6 +69,7 @@ feedbackRouter.get("/contacts", requireAuth, async (req: any, res) => {
            FROM users u WHERE u.role='teacher' AND (
              EXISTS (SELECT 1 FROM topic_shares ts JOIN topics t ON t.id=ts.topic_id WHERE ts.recipient_id=$1 AND t.owner_id=u.id)
              OR EXISTS (SELECT 1 FROM quiz_shares qs JOIN quizzes q ON q.id=qs.quiz_id WHERE qs.recipient_id=$1 AND q.owner_id=u.id)
+             OR EXISTS (SELECT 1 FROM flashcard_shares fs JOIN flashcard_packs p ON p.id=fs.pack_id WHERE fs.recipient_id=$1 AND p.owner_id=u.id)
              OR EXISTS (SELECT 1 FROM feedback_messages f WHERE f.student_id=$1 AND f.teacher_id=u.id)
            ) ORDER BY u.username`, [userId]);
     res.json(result.rows);
@@ -57,8 +85,14 @@ feedbackRouter.get("/:partnerId", requireAuth, async (req: any, res) => {
   if (!pair) return res.status(403).json({ error: "Érvénytelen kapcsolat." });
   try {
     const result = await pool.query(
-      `SELECT f.id,f.message,f.topic_id,f.author_id,f.created_at,f.read_at,u.username AS author_name,t.name AS topic_name
-       FROM feedback_messages f JOIN users u ON u.id=f.author_id LEFT JOIN topics t ON t.id=f.topic_id
+      `SELECT f.id,f.message,f.topic_id,f.quiz_id,f.flashcard_pack_id,f.author_id,f.created_at,f.read_at,
+              u.username AS author_name,t.name AS topic_name,q.title AS quiz_title,p.title AS flashcard_title,
+              CASE WHEN f.quiz_id IS NOT NULL THEN 'quiz' WHEN f.flashcard_pack_id IS NOT NULL THEN 'flashcards'
+                   WHEN f.topic_id IS NOT NULL THEN 'topic' ELSE NULL END AS target_type,
+              COALESCE(q.title,p.title,t.name) AS target_title
+       FROM feedback_messages f JOIN users u ON u.id=f.author_id
+       LEFT JOIN topics t ON t.id=f.topic_id LEFT JOIN quizzes q ON q.id=f.quiz_id
+       LEFT JOIN flashcard_packs p ON p.id=f.flashcard_pack_id
        WHERE f.teacher_id=$1 AND f.student_id=$2 ORDER BY f.created_at`,
       [pair.teacherId, pair.studentId]
     );
@@ -73,16 +107,41 @@ feedbackRouter.get("/:partnerId", requireAuth, async (req: any, res) => {
   }
 });
 
-feedbackRouter.post("/:partnerId", requireAuth, async (req: any, res) => {
+feedbackRouter.get("/:partnerId/targets", requireAuth, async (req: any, res) => {
   const partnerId = uuid.parse(req.params.partnerId);
-  const body = z.object({ message: z.string().trim().min(1).max(2000), topic_id: z.string().uuid().nullable().optional() }).parse(req.body);
   const pair = await resolvePair(req.user, partnerId);
   if (!pair) return res.status(403).json({ error: "Érvénytelen kapcsolat." });
   try {
+    res.json(await getFeedbackTargets(pair));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Nem sikerült betölteni a visszajelzés céljait." });
+  }
+});
+
+feedbackRouter.post("/:partnerId", requireAuth, async (req: any, res) => {
+  const partnerId = uuid.parse(req.params.partnerId);
+  const body = z.object({
+    message: z.string().trim().min(1).max(2000),
+    target_type: z.enum(["topic", "quiz", "flashcards"]).nullable().optional(),
+    target_id: z.string().uuid().nullable().optional(),
+  }).parse(req.body);
+  const pair = await resolvePair(req.user, partnerId);
+  if (!pair) return res.status(403).json({ error: "Érvénytelen kapcsolat." });
+  try {
+    if (body.target_type && body.target_id) {
+      const targets = await getFeedbackTargets(pair);
+      if (!targets.some((target) => target.type === body.target_type && target.id === body.target_id)) {
+        return res.status(403).json({ error: "A kiválasztott tanulási elem nem tartozik ehhez a kapcsolathoz." });
+      }
+    }
+    const topicId = body.target_type === "topic" ? body.target_id : null;
+    const quizId = body.target_type === "quiz" ? body.target_id : null;
+    const flashcardPackId = body.target_type === "flashcards" ? body.target_id : null;
     const result = await pool.query(
-      `INSERT INTO feedback_messages(teacher_id,student_id,topic_id,author_id,message)
-       VALUES($1,$2,$3,$4,$5) RETURNING *`,
-      [pair.teacherId, pair.studentId, body.topic_id ?? null, req.user.sub, body.message]
+      `INSERT INTO feedback_messages(teacher_id,student_id,topic_id,quiz_id,flashcard_pack_id,author_id,message)
+       VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [pair.teacherId, pair.studentId, topicId, quizId, flashcardPackId, req.user.sub, body.message]
     );
     const offset = Number(req.headers["x-timezone-offset"] ?? 0);
     await recordLearningEvent(req.user.sub, "send_feedback", 1, { partner_id: partnerId }, Number.isFinite(offset) ? offset : 0);

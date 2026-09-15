@@ -4,7 +4,7 @@ import { PageLayout } from "../ui/PageLayout";
 export function FlashcardLibrary() {
   return (
     <PageLayout
-      title="Kártyapackek"
+      title="Flashcards"
       subtitle="Állíts össze fogalomcsomagokat, alakíts kvízt kártyákká, és gyakorolj ütemezetten."
     >
       <Flashcards />

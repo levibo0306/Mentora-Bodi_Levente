@@ -47,6 +47,15 @@ CREATE TABLE IF NOT EXISTS flashcard_reviews (
   PRIMARY KEY (user_id, card_id)
 );
 
+CREATE TABLE IF NOT EXISTS flashcard_shares (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  pack_id uuid NOT NULL REFERENCES flashcard_packs(id) ON DELETE CASCADE,
+  token text NOT NULL UNIQUE,
+  recipient_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  shared_by uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS feedback_messages (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   teacher_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -57,6 +66,9 @@ CREATE TABLE IF NOT EXISTS feedback_messages (
   created_at timestamptz NOT NULL DEFAULT now(),
   read_at timestamptz
 );
+
+ALTER TABLE feedback_messages ADD COLUMN IF NOT EXISTS quiz_id uuid REFERENCES quizzes(id) ON DELETE SET NULL;
+ALTER TABLE feedback_messages ADD COLUMN IF NOT EXISTS flashcard_pack_id uuid REFERENCES flashcard_packs(id) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS weekly_goals (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -78,12 +90,25 @@ CREATE TABLE IF NOT EXISTS learning_events (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS student_question_profiles (
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  question_id uuid NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  attempts integer NOT NULL DEFAULT 0,
+  correct_count integer NOT NULL DEFAULT 0,
+  mastery_score numeric(5,4) NOT NULL DEFAULT 0,
+  last_answer_correct boolean,
+  last_answered_at timestamptz,
+  PRIMARY KEY (user_id, question_id)
+);
+
 ALTER TABLE daily_missions ADD COLUMN IF NOT EXISTS requirements jsonb NOT NULL DEFAULT '[]'::jsonb;
 
 CREATE INDEX IF NOT EXISTS idx_flashcard_packs_topic ON flashcard_packs(topic_id);
 CREATE INDEX IF NOT EXISTS idx_flashcard_reviews_pack ON flashcard_reviews(pack_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_flashcard_shares_recipient ON flashcard_shares(recipient_id, pack_id);
 CREATE INDEX IF NOT EXISTS idx_feedback_pair ON feedback_messages(teacher_id, student_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_learning_events_user_date ON learning_events(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_student_question_profiles_user ON student_question_profiles(user_id, mastery_score, last_answered_at);
 `;
 
 async function migrate() {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createQuiz, createQuestion, updateQuestion, updateQuiz, getQuiz, generateQuestionsAI, CreateQuestionDto } from '../api/quizzes';
+import { createQuiz, createQuestion, updateQuestion, updateQuiz, getQuiz, generateQuestionsAI, generateQuestionsFromDocument, CreateQuestionDto } from '../api/quizzes';
 import { getTopics, Topic } from '../api/topics';
 import { api } from '../api/http';
 
@@ -26,6 +26,8 @@ export const CreateQuizForm = ({ quizId, onSuccess }: Props) => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const [aiTopic, setAiTopic] = useState('');
+  const [aiFile, setAiFile] = useState<File | null>(null);
+  const [aiSourceStatus, setAiSourceStatus] = useState('');
   const [aiCount, setAiCount] = useState(5);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationElapsed, setGenerationElapsed] = useState(0);
@@ -138,7 +140,7 @@ export const CreateQuizForm = ({ quizId, onSuccess }: Props) => {
   };
 
   const handleGenerateQuestions = async () => {
-    if (aiTopic.trim().length < 50) {
+    if (!aiFile && aiTopic.trim().length < 50) {
       setError("A tananyag legyen legalább 50 karakter hosszú.");
       return;
     }
@@ -148,9 +150,22 @@ export const CreateQuizForm = ({ quizId, onSuccess }: Props) => {
     const controller = new AbortController();
     generationController.current = controller;
     try {
-      const generated = await generateQuestionsAI(aiTopic.trim(), aiCount, controller.signal);
+      const result = aiFile
+        ? await generateQuestionsFromDocument(aiFile, aiCount, controller.signal)
+        : null;
+      const generated = result?.questions ?? await generateQuestionsAI(aiTopic.trim(), aiCount, controller.signal);
       setQuestions((current) => [...current, ...generated]);
       setAiTopic("");
+      if (result) {
+        setAiSourceStatus(
+          result.source.truncated
+            ? `${result.source.filename}: ${result.source.characters.toLocaleString("hu-HU")} karakterből az első 7 000 került feldolgozásra.`
+            : `${result.source.filename}: ${result.source.characters.toLocaleString("hu-HU")} karakter feldolgozva.`,
+        );
+        setAiFile(null);
+      } else {
+        setAiSourceStatus("A bemásolt tananyag feldolgozva.");
+      }
     } catch (err: any) {
       setError(err?.name === "AbortError" ? "A generálást megszakítottad." : err.message || "Nem sikerült kérdéseket generálni.");
     } finally {
@@ -244,7 +259,7 @@ export const CreateQuizForm = ({ quizId, onSuccess }: Props) => {
             <label>Téma</label>
             <select value={topicId ?? ""} onChange={(e) => setTopicId(e.target.value || null)}>
               <option value="">Nincs téma</option>
-              {topics.map((t) => (
+              {topics.filter((topic) => topic.is_owner).map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
@@ -261,7 +276,7 @@ export const CreateQuizForm = ({ quizId, onSuccess }: Props) => {
               <div>
                 <span className="eyebrow">Helyi AI · Qwen3</span>
                 <h3>Kérdések tananyagból</h3>
-                <p>Illeszd be a forrásszöveget. A kérdések először a szerkeszthető listába kerülnek.</p>
+                <p>Illeszd be a forrásszöveget, vagy tölts fel PDF/DOCX dokumentumot. A kérdések először a szerkeszthető listába kerülnek.</p>
               </div>
               <label>
                 Kérdések száma
@@ -276,7 +291,39 @@ export const CreateQuizForm = ({ quizId, onSuccess }: Props) => {
               placeholder="Másold ide a jegyzetet vagy tananyagot, amelyből a kérdések készüljenek..."
               rows={7}
               maxLength={7000}
+              disabled={!!aiFile}
             />
+            <div className="ai-document-upload">
+              <label>
+                PDF vagy DOCX feltöltése
+                <input
+                  type="file"
+                  accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  disabled={isGenerating}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    if (file && file.size > 8 * 1024 * 1024) {
+                      setError("A dokumentum legfeljebb 8 MB lehet.");
+                      event.target.value = "";
+                      setAiFile(null);
+                      return;
+                    }
+                    setAiFile(file);
+                    if (file) {
+                      setAiTopic("");
+                      setError(null);
+                      setAiSourceStatus(`${file.name} kiválasztva.`);
+                    }
+                  }}
+                />
+              </label>
+              {aiFile && (
+                <button type="button" className="text-button" onClick={() => { setAiFile(null); setAiSourceStatus(""); }}>
+                  Fájl eltávolítása
+                </button>
+              )}
+            </div>
+            {aiSourceStatus && <div className="inline-status success">{aiSourceStatus}</div>}
             <div className="ai-builder-actions">
               <small>{aiTopic.length.toLocaleString("hu-HU")} / 7 000 karakter</small>
               <div className="ai-action-buttons">
@@ -288,7 +335,7 @@ export const CreateQuizForm = ({ quizId, onSuccess }: Props) => {
                 <button
                   type="button"
                   className="btn btn-primary"
-                  disabled={isGenerating || aiTopic.trim().length < 50}
+                  disabled={isGenerating || (!aiFile && aiTopic.trim().length < 50)}
                   onClick={handleGenerateQuestions}
                 >
                   {isGenerating ? `Generálás · ${generationElapsed} mp` : `${aiCount} kérdés generálása`}
