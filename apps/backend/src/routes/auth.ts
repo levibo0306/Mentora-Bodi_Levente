@@ -7,7 +7,6 @@ import { revokeToken } from "../revokedTokens";
 
 export const authRouter = Router();
 
-// --- REGISTER ---
 const RegisterBody = z.object({
   username: z.string().min(3).max(24).regex(/^[a-zA-Z0-9_.]+$/),
   email: z.string().email(),
@@ -34,7 +33,6 @@ authRouter.post("/register", async (req, res) => {
   }
 });
 
-// --- LOGIN ---
 const LoginBody = z.object({
   identifier: z.string().min(3),
   password: z.string().min(1),
@@ -69,17 +67,14 @@ authRouter.post("/login", async (req, res) => {
   }
 });
 
-// --- ME (User info) ---
-// ✅ JAVÍTVA: req.user használata req.auth helyett
 authRouter.get("/me", requireAuth, async (req, res) => {
   try {
-    const user = (req as any).user; // ← Ez a javítás!
+    const user = (req as any).user;
     
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // Opcionálisan: friss adat DB-ből
     const r = await pool.query(
       "select id, username, email, role, xp from users where id=$1",
       [user.sub]
@@ -152,7 +147,6 @@ authRouter.patch("/me", requireAuth, async (req: any, res) => {
   }
 });
 
-// --- LOGOUT ---
 authRouter.post("/logout", requireAuth, async (req, res) => {
   try {
     const token = (req as any).token as string;

@@ -51,6 +51,21 @@ type OllamaChatResponse = {
   error?: string;
 };
 
+function ollamaConfig() {
+  const baseUrl = (process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434")
+    .replace(/\/$/, "")
+    .replace(/\/api$/, "");
+  const apiKey = process.env.OLLAMA_API_KEY?.trim();
+  return {
+    baseUrl,
+    model: process.env.OLLAMA_MODEL ?? "qwen3:4b",
+    headers: {
+      "Content-Type": "application/json",
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+    },
+  };
+}
+
 export class AiServiceError extends Error {
   constructor(message: string, public readonly statusCode = 502) {
     super(message);
@@ -59,8 +74,7 @@ export class AiServiceError extends Error {
 }
 
 export async function generateQuizFromText(textContext: string, count = 5, externalSignal?: AbortSignal): Promise<GeneratedQuestion[]> {
-  const baseUrl = (process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434").replace(/\/$/, "");
-  const model = process.env.OLLAMA_MODEL ?? "qwen3:4b";
+  const { baseUrl, model, headers } = ollamaConfig();
   const timeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS ?? 120_000);
   const contextSize = Math.min(8_192, Math.max(2_048, Number(process.env.OLLAMA_NUM_CTX ?? 4_096)));
   const controller = new AbortController();
@@ -71,7 +85,7 @@ export async function generateQuizFromText(textContext: string, count = 5, exter
   try {
     const response = await fetch(`${baseUrl}/api/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       signal: controller.signal,
       body: JSON.stringify({
         model,
@@ -139,10 +153,7 @@ export async function generateQuizFromText(textContext: string, count = 5, exter
     if (error instanceof Error && error.name === "AbortError") {
       throw new AiServiceError("Az AI-generálás túllépte az időkorlátot. Próbáld rövidebb szöveggel.", 504);
     }
-    throw new AiServiceError(
-      "Az Ollama nem érhető el. Indítsd el az Ollamát, és ellenőrizd, hogy a qwen3:4b modell le van töltve.",
-      503,
-    );
+    throw new AiServiceError(`Az Ollama nem érhető el. Ellenőrizd az OLLAMA_BASE_URL címet és a(z) ${model} modell elérhetőségét.`, 503);
   } finally {
     clearTimeout(timeout);
     externalSignal?.removeEventListener("abort", abortFromCaller);

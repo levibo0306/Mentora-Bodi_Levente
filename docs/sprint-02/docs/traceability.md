@@ -1,10 +1,14 @@
-# Traceability – Sprint 2
+# Traceability
 
-| Story | AC  | Tesztfájl | Kód / Modul | CI lépés |
-|-------|-----|-------------------------------|---------------------------------------------|--------------|
-| US-01 | AC1 | sprints/02/tests/acceptance/empty_state.feature | sprints/02/src/ui/EmptyState.tsx | smoke |
-| US-02 | AC1 | sprints/02/tests/acceptance/create_quiz.feature | sprints/02/src/ui/CreateQuizForm.tsx | unit |
-| US-02 | AC2 | sprints/02/tests/unit/form_validation.spec.ts | sprints/02/src/core/quizLogic.ts | unit |
-| US-03 | AC1 | sprints/02/tests/unit/list_state.spec.ts | sprints/02/src/ui/QuizList.tsx | acceptance |
-| US-04 | AC1 | sprints/02/tests/acceptance/error_state.feature | sprints/02/src/ui/ErrorState.tsx | smoke |
-| US-05 | AC1 | sprints/02/tests/unit/utils.spec.ts | sprints/02/src/core/notifications.ts (vagy UI toast) | unit |
+| Funkció | Ellenőrzés | Implementáció | CI lépés |
+|---|---|---|---|
+| Offline Flashcards | `tests/unit/offline_flashcards.spec.ts` | `src/infra/offlineFlashcards.ts` | frontend unit |
+| Offline kvíz és szinkron | `tests/unit/offline_quizzes.spec.ts` | `src/infra/offlineQuizzes.ts` | frontend unit |
+| PDF-alapú kvízkészítés | `tests/e2e/mentora.spec.ts` | `src/ui/CreateQuizForm.tsx` | Playwright E2E |
+| Adaptív kvíz UI | `tests/e2e/mentora.spec.ts` | `src/ui/QuizPlayer.tsx` | Playwright E2E |
+| Adaptív rangsorolás | `apps/backend/tests/adaptive.spec.ts` | `apps/backend/src/services/adaptive.ts` | backend unit |
+| JWT konfiguráció és token-validálás | `apps/backend/tests/auth.spec.ts` | `apps/backend/src/middleware/auth.ts` | backend unit |
+| Dokumentumfeldolgozás | `apps/backend/tests/documentText.spec.ts` | `apps/backend/src/services/documentText.ts` | backend unit |
+| Health/auth védelem | `apps/backend/tests/app.spec.ts` | `apps/backend/src/index.ts` | backend integration |
+
+A frontend tesztutak az `apps/frontend` könyvtárhoz képest értendők. A workflow: `.github/workflows/ci.yml`.

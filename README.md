@@ -54,6 +54,7 @@ Az alkalmazás futása közben az Ollama API automatikusan elérhető. A modell 
 ```env
 OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=qwen3:4b
+OLLAMA_API_KEY=
 OLLAMA_TIMEOUT_MS=120000
 OLLAMA_NUM_CTX=4096
 ```
@@ -94,6 +95,17 @@ npm run dev:frontend
 
 A frontend alapértelmezetten: `http://localhost:5173`
 
+### Környezeti konfiguráció
+
+A backend `.env` fontosabb mezői:
+
+- `DATABASE_URL` – PostgreSQL kapcsolat
+- `JWT_SECRET` – hosszú, véletlen titok
+- `CORS_ORIGINS` – engedélyezett frontend origine(k), vesszővel elválasztva
+- `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `OLLAMA_API_KEY` – helyi vagy távoli Ollama szolgáltatás
+
+A frontendhez másold az `apps/frontend/.env.example` fájlt `.env` néven. Publikus telepítésnél a `VITE_API_BASE_URL` értéke a backend HTTPS URL-je legyen.
+
 ## 3) Tesztek
 
 Frontend tesztek:
@@ -117,6 +129,11 @@ Az összes teszt egymás után:
 npm run test:all
 ```
 
+Typecheck, backend tesztek, coverage és production build egy parancsban:
+```bash
+npm run verify
+```
+
 CI-szerű futtatás coverage-zel:
 ```bash
 npm run test:frontend:ci
@@ -125,3 +142,5 @@ npm run test:frontend:ci
 ## 4) Dokumentáció
 
 A részletes dokumentumok a `docs/` mappában vannak (PRD/ADR, Sprint 1-2 anyagok, prototype).
+A végső beadás lépései: [`docs/submission/CHECKLIST.md`](docs/submission/CHECKLIST.md).
+A teljes technikai audit és a nyitott javaslatok: [`docs/submission/AUDIT.md`](docs/submission/AUDIT.md).

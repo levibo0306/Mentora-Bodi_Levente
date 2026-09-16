@@ -1,5 +1,7 @@
 # Sprint 2 – Mentora quiz MVP szelet
 
+> Történeti sprintzáró dokumentum. A jelenlegi prototípus már PostgreSQL backendet, adaptív kvízt, PDF/DOCX AI-generálást és Playwright E2E-teszteket is tartalmaz; az aktuális állapotot a gyökér `README.md` és a `docs/prototype` dokumentumai írják le.
+
 ## Összefoglaló
 
 Ez a sprint egy egyszerű kvíz MVP szeletet valósít meg:
@@ -16,23 +18,23 @@ A sprinthez tartozik Spec v0.2, user story + AC, ADR-ek, wireframe-ek, Terraform
 ## Fő deliverable-ok
 
 - Spec v0.2:  
-  [`sprints/02/docs/spec/product_spec_v0.2.md`](sprints/02/docs/spec/product_spec_v0.2.md)
+  [`docs/specs/product_spec_v0.2.md`](docs/specs/product_spec_v0.2.md)
 - User Story + AC:  
-  [`sprints/02/docs/stories/user_stories.md`](sprints/02/docs/stories/user_stories.md)
+  [`docs/stories/user_stories.md`](docs/stories/user_stories.md)
 - ADR-ek:
-  - Deployment target: [`sprints/02/docs/adr/0002-deployment-target.md`](sprints/02/docs/adr/0002-deployment-target.md)
-  - IaC stratégia: [`sprints/02/docs/adr/0003-iac-strategy.md`](sprints/02/docs/adr/0003-iac-strategy.md)
+  - Deployment target: [`docs/adr/0002-deployment-target.md`](docs/adr/0002-deployment-target.md)
+  - IaC stratégia: [`docs/adr/0003-iac-strategy.md`](docs/adr/0003-iac-strategy.md)
 - Wireframe-ek:  
-  képek: `sprints/02/wireframes/*.jpg`  
-  leírás: [`sprints/02/wireframes/README.md`](sprints/02/wireframes/README.md)
+  képek: `wireframes/*.jpg`
+  leírás: [`wireframes/README.md`](wireframes/README.md)
 - Traceability tábla:  
-  [`sprints/02/docs/traceability.md`](sprints/02/docs/traceability.md)
+  [`docs/traceability.md`](docs/traceability.md)
 - DoR / DoD:  
-  [`sprints/02/docs/process/dor_dod.md`](sprints/02/docs/process/dor_dod.md)
+  [`docs/process/dor_dod.md`](docs/process/dor_dod.md)
 - AI-napló:  
-  [`sprints/02/ai/ai_log.jsonl`](sprints/02/ai/ai_log.jsonl)
+  [`ai/ai_log.jsonl`](ai/ai_log.jsonl)
 - Terraform (IaC):  
-  [`sprints/02/infra/terraform/`](sprints/02/infra/terraform)
+  [`infra/terraform/`](infra/terraform)
 
 ---
 
@@ -42,17 +44,17 @@ A sprinthez tartozik Spec v0.2, user story + AC, ADR-ek, wireframe-ek, Terraform
 
 ```bash
 npm ci
-npm run test:ci      # Vitest + JUnit + coverage (sprints/02/reports/junit.xml, sprints/02/reports/coverage.xml)
-npm run build        # Vite build -> dist/
+npm run test:frontend:ci  # Vitest + JUnit + coverage
+npm run build             # Vite build -> apps/frontend/dist/
 npm run preview      # http://localhost:4173
 ```
 
 ## Smoke teszt:
 - YAML alapú smoke specifikáció:
-  [`sprints/02/scripts/smoke.yaml`](sprints/02/scripts/smoke.yaml)
+  [`scripts/smoke.yaml`](scripts/smoke.yaml)
 
 - HTTP (REST Client) smoke:
-  [`sprints/02/scripts/smoke.http`](sprints/02/scripts/smoke.http)
+  [`scripts/smoke.http`](scripts/smoke.http)
 
 - Elvárás:
 
@@ -62,55 +64,55 @@ npm run preview      # http://localhost:4173
 ## Terraform (IaC):
 
 ```bash
-cd infra/terraform
+cd docs/sprint-02/infra/terraform
 terraform init
 terraform validate
 terraform plan -out=plan.out
 ```
 - Artefakt:
 
-  [Plan kimenet](sprints/02/infra/terraform/plan.out)
+  [Plan kimenet](infra/terraform/plan.out)
 
 ## Jelentések / artefaktok
 
 - JUnit tesztriport:
-  [`sprints/02/reports/junit.xml`](sprints/02/reports/junit.xml)
+  [`reports/junit.xml`](reports/junit.xml)
 
-  → 5 teszt, 0 failure, 0 error.
+  → az aktuális riport 5, a futó offline funkciókat ellenőrző frontend unit tesztet tartalmaz, 0 hibával.
 
 - Coverage riport (Cobertura XML):
-  [`sprints/02/reports/coverage.xml`](sprints/02/reports/coverage.xml)
+  [`reports/coverage.xml`](reports/coverage.xml)
 
-  → line-rate ≈ 0.66 (≈66% line coverage a core logikán).
+  → line-rate ≈ 0.92 (≈92% line coverage az offline kvíz- és Flashcards-logikán).
 
 
-## Known issues:
+## A Sprint 2 lezárásakor ismert korlátok
 
-A kvízek jelenleg in-memory tárolódnak a sprints/02/src/api/quizzes.ts fájlban, nincs valódi backend/perzisztens adatbázis.
+A kvízek ekkor még in-memory tárolóban voltak; ezt a jelenlegi verzió PostgreSQL perzisztenciára cserélte.
 
-A UI minimális, nincsenek dedikált styling komponensek / reszponzív layout; a fókusz most az MVP flow, a logika és a tesztelhetőség volt.
+A UI ekkor még minimális volt; a jelenlegi verzió külön dashboardokat, témákat, Flashcards és gamification nézeteket tartalmaz.
 
-A coverage elsősorban a core/domain logikára (sprints/02/src/core/quizLogic.ts) koncentrál; a React komponensekre nincs külön unit/komponens teszt.
+A coverage az offline kvíz- és Flashcards-logikára koncentrál; a React komponensekre nincs külön unit/komponens teszt.
 
 
 ## Next steps (jövőbeli fejlesztés):
 
 Valódi backend/API integráció és perzisztens adattárolás a kvízekhez.
 
-További unit/komponens tesztek a UI rétegre (CreateQuizForm, QuizList, ErrorState, stb.).
+További komponens tesztek a UI rétegre (CreateQuizForm, QuizList, megosztási és hibaállapotok).
 
 Alap design/styling és reszponzív nézetek bevezetése.
 
-Esetleges E2E tesztek (Playwright/Cypress) az end-to-end kvíz flow-ra.
+Az E2E kvíz-flow az aktuális verzióban Playwrighttal elkészült.
 
 ### Fő flow – lista nézet
-![01 – Main flow](sprints/02/wireframes/01-main-flow.jpg)
+![01 – Main flow](wireframes/01-main-flow.jpg)
 
 ### Üres állapot
-![02 – Empty state](sprints/02/wireframes/02-empty-state.jpg)
+![02 – Empty state](wireframes/02-empty-state.jpg)
 
 ### Hibaállapot
-![03 – Error state](sprints/02/wireframes/03-error-state.jpg)
+![03 – Error state](wireframes/03-error-state.jpg)
 
 ### Form validáció
-![04 – Form validation](sprints/02/wireframes/04-form-validation.jpg)
+![04 – Form validation](wireframes/04-form-validation.jpg)

@@ -9,12 +9,16 @@
     "install:all": "npm install --workspaces",
     "dev:frontend": "npm --workspace apps/frontend run dev",
     "dev:backend": "npm --workspace apps/backend run dev",
+    "build": "npm --workspace apps/frontend run build",
+    "preview": "npm --workspace apps/frontend run preview",
+    "typecheck": "npm --workspace apps/backend run typecheck && npm --workspace apps/frontend exec tsc -- --noEmit",
     "migrate": "npm --workspace apps/backend run migrate",
     "seed": "npm --workspace apps/backend run seed",
     "test:frontend": "npm --workspace apps/frontend run test",
     "test:frontend:ci": "npm --workspace apps/frontend run test:ci",
     "test:backend": "npm --workspace apps/backend run test",
     "test:e2e": "npm --workspace apps/frontend run test:e2e",
-    "test:all": "npm run test:backend && npm run test:frontend && npm run test:e2e"
+    "test:all": "npm run test:backend && npm run test:frontend && npm run test:e2e",
+    "verify": "npm run typecheck && npm run test:backend && npm run test:frontend:ci && npm run build"
   }
 }

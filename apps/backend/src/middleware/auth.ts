@@ -1,11 +1,24 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { z } from "zod";
 import { isTokenRevoked } from "../revokedTokens";
 
-export type JwtPayload = { sub: string; email: string; role: "teacher" | "student" };
+const JwtPayloadSchema = z.object({
+  sub: z.string().uuid(),
+  email: z.string().email(),
+  role: z.enum(["teacher", "student"]),
+});
+
+export type JwtPayload = z.infer<typeof JwtPayloadSchema>;
+
+function jwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET missing");
+  return secret;
+}
 
 export function signToken(payload: JwtPayload) {
-  return jwt.sign(payload, process.env.JWT_SECRET || "titkos-kulcs", { expiresIn: "24h" });
+  return jwt.sign(payload, jwtSecret(), { expiresIn: "24h" });
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -16,8 +29,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (isTokenRevoked(token)) return res.status(401).json({ error: "Unauthorized" });
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || "titkos-kulcs") as JwtPayload;
-    // JAVÍTÁS: req.auth helyett req.user használata
+    const payload = JwtPayloadSchema.parse(jwt.verify(token, jwtSecret()));
     (req as any).user = payload; 
     (req as any).token = token;
     next();
@@ -34,7 +46,7 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
   if (isTokenRevoked(token)) return next();
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || "titkos-kulcs") as JwtPayload;
+    const payload = JwtPayloadSchema.parse(jwt.verify(token, jwtSecret()));
     (req as any).user = payload;
     (req as any).token = token;
   } catch {
@@ -43,7 +55,6 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
   next();
 }
 
-// JAVÍTÁS: Hiányzó requireRole függvény hozzáadása
 export function requireRole(role: "teacher" | "student") {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user as JwtPayload | undefined;

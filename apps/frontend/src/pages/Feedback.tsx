@@ -37,7 +37,7 @@ export function Feedback() {
 
   const selected = contacts.find((contact) => contact.id === selectedId);
   return (
-    <PageLayout title="Visszajelzések" subtitle="Közös tér a tanulási eredmények megbeszéléséhez.">
+    <PageLayout title="Csevegés" subtitle="Beszéljétek meg a tanulási eredményeket és a felmerülő kérdéseket.">
       <div className="feedback-layout">
         <aside className="feedback-contacts card">
           <h2>{user?.role === "teacher" ? "Diákjaim" : "Tanárok"}</h2>

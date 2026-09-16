@@ -29,8 +29,9 @@ const Dashboard = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [editingQuizId, setEditingQuizId] = useState<string | null>(null);
   
-  // Tab state (csak diákoknak)
-  const [activeTab, setActiveTab] = useState<'own' | 'flashcards' | 'shared' | 'add' | 'topics'>('own');
+  // A fő navigáció célokat mutat; a saját/megosztott választás a kvízeken belül marad.
+  const [activeTab, setActiveTab] = useState<'quizzes' | 'flashcards' | 'add' | 'topics'>('quizzes');
+  const [quizSource, setQuizSource] = useState<'own' | 'shared'>('own');
 
   const handleCreateClick = () => {
     setEditingQuizId(null);
@@ -50,21 +51,39 @@ const Dashboard = () => {
 
   const isStudent = user?.role === 'student';
 
+  const studentSectionTitle = activeTab === "flashcards"
+    ? "Tanulókártyák"
+    : activeTab === "topics"
+      ? "Témák"
+      : activeTab === "add"
+        ? "Tartalom hozzáadása"
+        : "Kvízeim";
+
   return (
     <div className="dashboard active">
       <div className="main-content">
+        <header className="dashboard-heading">
+          <div>
+            <span className="eyebrow">{isStudent ? "Tanulói kezdőlap" : "Tanári kezdőlap"}</span>
+            <h1>Szia, {user?.username ?? user?.email?.split("@")[0]}!</h1>
+            <p>{isStudent ? "Válassz egy tananyagot, és folytasd onnan, ahol abbahagytad." : "Készíts kvízt, vagy nézd meg, hogyan teljesítettek a diákjaid."}</p>
+          </div>
+          {!isStudent && (
+            <button className="btn btn-primary dashboard-primary-action" onClick={handleCreateClick}>
+              + Új kvíz
+            </button>
+          )}
+        </header>
+
         <DashboardOverview />
 
         {!isStudent && (
           <div className="teacher-hq">
             <div className="teacher-hq-row">
-              <div className="teacher-hq-title">🎯 Teacher HQ</div>
-              <div className="teacher-hq-sub">Gyors műveletek a kvízekhez</div>
+              <div className="teacher-hq-title">🎯 Tanári eszközök</div>
+              <div className="teacher-hq-sub">Minden tanári eszköz egy helyen</div>
             </div>
             <div className="teacher-hq-actions">
-              <button className="btn btn-primary btn-sm" onClick={handleCreateClick}>
-                + Új kvíz
-              </button>
               <Link to="/results" className="btn btn-secondary btn-sm">
                 Eredmények
               </Link>
@@ -78,10 +97,13 @@ const Dashboard = () => {
         {!isStudent && <TopicsPanel />}
 
         <div className="section-header">
-          <h2 className="section-title">{isStudent && activeTab === "flashcards" ? "Flashcards" : isStudent ? "Tanulóterem" : "Saját kvízeim"}</h2>
+          <div>
+            <h2 className="section-title">{isStudent ? studentSectionTitle : "Saját kvízeim"}</h2>
+            {isStudent && <p className="section-subtitle">Itt találod a tanuláshoz szükséges tartalmakat.</p>}
+          </div>
           
-          {(!isStudent || activeTab === "own") && <button className="btn btn-primary btn-sm" onClick={handleCreateClick}>
-              + Új Kvíz
+          {(!isStudent || activeTab === "quizzes") && <button className="btn btn-primary btn-sm" onClick={handleCreateClick}>
+              + Új kvíz
           </button>}
         </div>
 
@@ -89,10 +111,10 @@ const Dashboard = () => {
         {isStudent && (
           <div className="tabs">
             <button
-              onClick={() => setActiveTab('own')}
-              className={`tab ${activeTab === 'own' ? "active" : ""}`}
+              onClick={() => setActiveTab('quizzes')}
+              className={`tab ${activeTab === 'quizzes' ? "active" : ""}`}
             >
-              📚 Saját Kvízek
+              <span aria-hidden="true">📚</span> Kvízek
             </button>
             <button
               onClick={() => {
@@ -101,47 +123,63 @@ const Dashboard = () => {
               }}
               className={`tab ${activeTab === 'flashcards' ? "active" : ""}`}
             >
-              🗂️ Flashcards
-            </button>
-            <button
-              onClick={() => setActiveTab('shared')}
-              className={`tab ${activeTab === 'shared' ? "active" : ""}`}
-            >
-              👨‍🏫 Velem Megosztva
+              <span aria-hidden="true">🗂️</span> Kártyák
             </button>
             <button
               onClick={() => setActiveTab('add')}
               className={`tab ${activeTab === 'add' ? "active" : ""}`}
             >
-              ➕ Hozzáadás
+              <span aria-hidden="true">➕</span> Hozzáadás
             </button>
             <button
               onClick={() => setActiveTab('topics')}
               className={`tab ${activeTab === 'topics' ? "active" : ""}`}
             >
-              🧩 Témák
+              <span aria-hidden="true">🧩</span> Témák
             </button>
           </div>
         )}
 
-        {/* CONTENT - diákoknál tab-based, tanároknál csak lista */}
+        {/* A diákpanelek csatolva maradnak, így fülváltáskor nincs újratöltés vagy layout-ugrás. */}
         {isStudent ? (
-          activeTab === 'own' ? (
-            <QuizList key={refreshKey} onEdit={handleEditClick} />
-          ) : activeTab === 'flashcards' ? (
-            <Flashcards />
-          ) : activeTab === 'shared' ? (
-            <SharedWithMe key={`shared-${refreshKey}`} />
-          ) : activeTab === 'add' ? (
-            <SharedAdd
-              onAdded={(destination) => {
-                setActiveTab(destination);
-                setRefreshKey((prev) => prev + 1);
-              }}
-            />
-          ) : (
-            <TopicsPanel />
-          )
+          <div className="dashboard-tab-content">
+            <section hidden={activeTab !== "quizzes"} aria-label="Kvízek">
+              <div className="content-panel">
+                <div className="segment-control" aria-label="Kvízek szűrése">
+                  <button className={quizSource === "own" ? "active" : ""} onClick={() => setQuizSource("own")}>Saját kvízek</button>
+                  <button className={quizSource === "shared" ? "active" : ""} onClick={() => setQuizSource("shared")}>Velem megosztva</button>
+                </div>
+                <div hidden={quizSource !== "own"}>
+                  <QuizList key={refreshKey} onEdit={handleEditClick} />
+                </div>
+                <div hidden={quizSource !== "shared"}>
+                  <SharedWithMe key={`shared-${refreshKey}`} />
+                </div>
+              </div>
+            </section>
+
+            <section hidden={activeTab !== "flashcards"} aria-label="Tanulókártyák">
+              <Flashcards />
+            </section>
+
+            <section hidden={activeTab !== "add"} aria-label="Tartalom hozzáadása">
+              <SharedAdd
+                onAdded={(destination) => {
+                  if (destination === "shared") {
+                    setActiveTab("quizzes");
+                    setQuizSource("shared");
+                  } else {
+                    setActiveTab(destination);
+                  }
+                  setRefreshKey((prev) => prev + 1);
+                }}
+              />
+            </section>
+
+            <section hidden={activeTab !== "topics"} aria-label="Témák">
+              <TopicsPanel />
+            </section>
+          </div>
         ) : (
           <QuizList key={refreshKey} onEdit={handleEditClick} />
         )}

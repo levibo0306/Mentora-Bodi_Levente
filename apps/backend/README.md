@@ -20,12 +20,15 @@ Alapértelmezett port: `3001`
 
 Kötelező:
 - `DATABASE_URL`
+- `JWT_SECRET` (hosszú, véletlen érték; alapértelmezett titok nincs)
 
 Opcionális:
 - `PORT` (default 3001)
+- `CORS_ORIGINS` (vesszővel elválasztott frontend origine-k)
 - `SENTRY_DSN` (ha bekötöd a Sentry-t)
 - `OLLAMA_BASE_URL` (default `http://127.0.0.1:11434`)
 - `OLLAMA_MODEL` (default `qwen3:4b`)
+- `OLLAMA_API_KEY` (távoli Ollama/Ollama Cloud esetén; helyi futtatásnál nem kell)
 - `OLLAMA_TIMEOUT_MS` (default `120000`)
 - `OLLAMA_NUM_CTX` (default `4096`, a modell memóriaigényét korlátozza)
 

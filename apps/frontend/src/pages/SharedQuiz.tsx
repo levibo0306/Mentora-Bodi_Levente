@@ -151,6 +151,18 @@ export const SharedQuiz: React.FC = () => {
     );
   }
 
+  if (quizData.questions.length === 0) {
+    return (
+      <div className="result-card">
+        <h2>Ez a kvíz még üres</h2>
+        <p>Nincs kitölthető kérdés a megosztott kvízben.</p>
+        <button onClick={() => navigate('/')} className="btn btn-primary">
+          Vissza a főoldalra
+        </button>
+      </div>
+    );
+  }
+
   // Eredmény nézet
   if (result) {
     const percentage = Math.round((result.score / result.max) * 100);

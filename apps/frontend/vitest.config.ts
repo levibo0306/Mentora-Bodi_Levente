@@ -16,8 +16,14 @@ export default defineConfig({
       provider: "v8",
       reporter: [["cobertura", { file: "coverage.xml" }]],
       reportsDirectory: "../../docs/sprint-02/reports",
-      include: ["src/core/**/*.{ts,tsx}"],
+      include: ["src/infra/offlineQuizzes.ts", "src/infra/offlineFlashcards.ts"],
       exclude: ["tests/**/*"],
+      thresholds: {
+        lines: 60,
+        functions: 60,
+        statements: 60,
+        branches: 60,
+      },
     },
   },
 });

@@ -12,12 +12,19 @@ import { flashcardsRouter } from "./routes/flashcards";
 import { topicsRouter } from "./routes/topics";
 import { feedbackRouter } from "./routes/feedback";
 
+const allowedOrigins = (process.env.CORS_ORIGINS ?? "http://localhost:5173,http://127.0.0.1:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 export const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("A kérés originje nincs engedélyezve."));
+    },
     credentials: true,
   })
 );

@@ -5,7 +5,6 @@ A projekt eredetileg a kurzus sprint-template-jével indult. A projekt növeked�
 Ezért a beadáshoz egy **letisztított monorepo** szerkezet készült, ahol:
 - a futtatható kód az `apps/` alatt van,
 - a dokumentáció és sprint artefaktumok a `docs/` alatt,
-- a validátor és sémák külön, `tools/` alatt.
 
 ## Új mappák szerepe
 
@@ -46,10 +45,6 @@ Megjegyzés: az `index.html` script útvonala frissítve lett ` /src/main.tsx`-r
 
 - **régi:** `course.yaml`
 - **új:** `docs/course.yaml`
-
-### Validátor és sémák
-- **régi:** `scripts/` (root)
-- **új:** `tools/scripts/`
 
 ## Miért jó ez beadásnál?
 - A futtatható kód egy helyen: `apps/`

@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-// Importáljuk a típusokat és az API hívókat
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { loginApi, registerApi, updateProfileApi, type AuthUser, type UserRole } from "../api/auth";
 
 type AuthContextType = {
@@ -7,7 +6,6 @@ type AuthContextType = {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  // A login/register itt email/jelszót vár!
   login: (identifier: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string, role: UserRole) => Promise<void>;
   updateProfile: (data: { username: string; email: string; current_password: string; new_password?: string }) => Promise<void>;
@@ -23,7 +21,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Induláskor betöltjük a localStorage-ból
   useEffect(() => {
     const storedToken = localStorage.getItem("mentora_token");
     const storedUser = localStorage.getItem("mentora_user");
@@ -32,15 +29,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
-      } catch (e) {
+      } catch {
         console.error("Hibás user adat");
         localStorage.removeItem("mentora_token");
+        localStorage.removeItem("mentora_user");
       }
     }
     setIsLoading(false);
   }, []);
 
-  // Segédfüggvény a mentéshez
   const persist = (newToken: string, newUser: AuthUser) => {
     setToken(newToken);
     setUser(newUser);
@@ -48,13 +45,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem("mentora_user", JSON.stringify(newUser));
   };
 
-  // Login implementáció: API hívás -> Mentés
   const login = async (identifier: string, password: string) => {
     const data = await loginApi(identifier, password);
     persist(data.token, data.user);
   };
 
-  // Register implementáció: API hívás -> Mentés
   const register = async (username: string, email: string, password: string, role: UserRole) => {
     const data = await registerApi(username, email, password, role);
     persist(data.token, data.user);

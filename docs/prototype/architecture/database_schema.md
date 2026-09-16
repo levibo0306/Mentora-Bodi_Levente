@@ -1,54 +1,33 @@
-# Adatbázis Séma Dokumentáció
+# Adatbázisséma
 
-A rendszer PostgreSQL adatbázist használ. Az alábbiakban a v0.3-as verzióhoz tartozó végleges táblaszerkezet látható.
+A Mentora PostgreSQL-t használ. Új adatbázisnál először az `apps/backend/sql/schema.sql`, utána az idempotens `npm run migrate` futtatandó.
 
-## 1. Táblák (Tables)
+## Alaptáblák
 
-### `users`
-Felhasználók tárolása.
-| Mező | Típus | Leírás |
-| :--- | :--- | :--- |
-| `id` | UUID (PK) | Egyedi azonosító |
-| `email` | TEXT | Egyedi email cím |
-| `password_hash` | TEXT | Titkosított jelszó |
-| `role` | TEXT | 'teacher' vagy 'student' |
-| `created_at` | TIMESTAMPTZ | Regisztráció ideje |
+- `users` – fiók, szerepkör, XP és szint
+- `quizzes` – kvíz alapadatai, tulajdonos, téma és mód
+- `questions` – válaszlehetőségek, helyes index, magyarázat, nehézség és globális statisztika
+- `attempts` – felhasználói válaszok és pontszám
+- `topics` – tanulási témák/projektek
+- `quiz_shares`, `topic_shares` – címzett vagy publikus megosztások
+- `daily_missions`, `user_streaks` – gamification állapot
 
-### `quizzes`
-A tesztek fejléce (cím, leírás).
-| Mező | Típus | Leírás |
-| :--- | :--- | :--- |
-| `id` | UUID (PK) | Egyedi azonosító |
-| `owner_id` | UUID (FK) | Kapcsolat a `users` táblához |
-| `title` | TEXT | A kvíz címe |
-| `description` | TEXT | Opcionális leírás |
-| `created_at` | TIMESTAMPTZ | Létrehozás ideje |
+## Migrációval létrejövő táblák
 
-### `questions`
-A kvízekhez tartozó kérdések.
-| Mező | Típus | Leírás |
-| :--- | :--- | :--- |
-| `id` | UUID (PK) | Egyedi azonosító |
-| `quiz_id` | UUID (FK) | Melyik kvízhez tartozik (`ON DELETE CASCADE`) |
-| `prompt` | TEXT | A kérdés szövege |
-| `options` | JSONB | Válaszlehetőségek tömbje `["A", "B", ...]` |
-| `correct_index` | INTEGER | A helyes válasz indexe a tömbben (0-tól) |
-| `explanation` | TEXT | Magyarázat a helyes válaszhoz |
+- `flashcard_packs`, `flashcards` – csomagok és kártyák
+- `flashcard_reviews` – személyes ismétlési állapot
+- `flashcard_shares` – Flashcards-megosztások
+- `feedback_messages` – tanár–diák visszajelzések
+- `weekly_goals` – heti kvíz-, kártya- és aktívnap-célok
+- `learning_events` – tanulási aktivitások
+- `student_question_profiles` – tanulónkénti kérdésteljesítmény az adaptív kiválasztáshoz
 
-### `attempts`
-Kitöltések és eredmények naplózása.
-| Mező | Típus | Leírás |
-| :--- | :--- | :--- |
-| `id` | UUID (PK) | Egyedi azonosító |
-| `quiz_id` | UUID (FK) | Melyik kvízt töltötték ki |
-| `user_id` | UUID (FK) | Ki töltötte ki |
-| `answers` | JSONB | A leadott válaszok `{ "question_id": index }` |
-| `score` | INTEGER | Elért eredmény százalékban (0-100) |
-| `created_at` | TIMESTAMPTZ | Kitöltés ideje |
+## Fontos kapcsolatok
 
-## 2. Kapcsolatok (ERD Leírás)
-* **Users - Quizzes:** 1:N (Egy tanárnak sok kvíze lehet).
-* **Quizzes - Questions:** 1:N (Egy kvízhez sok kérdés tartozik).
-* **Users - Attempts:** 1:N (Egy diák sokszor kitöltheti).
+- Felhasználó `1:N` kvíz, téma, kitöltés és tanulási esemény
+- Kvíz `1:N` kérdés és kitöltés
+- Téma `1:N` kvíz és Flashcards-csomag
+- Flashcards-csomag `1:N` kártya
+- Felhasználó és kérdés `N:M` a `student_question_profiles` kapcsolótáblán keresztül
 
-(ami még nem szerepel a projektben csak létre van hozva az nincs itt feltünteve)
+A részletes SQL a [schema.sql](../../../apps/backend/sql/schema.sql) és [migrate.ts](../../../apps/backend/src/migrate.ts) fájlokban a technikai forrásigazság.

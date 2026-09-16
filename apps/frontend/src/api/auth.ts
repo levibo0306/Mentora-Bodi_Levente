@@ -1,6 +1,5 @@
 import { api } from "./http";
 
-// ITT DEFINIÁLJUK A TÍPUST
 export type UserRole = "teacher" | "student";
 
 export type AuthUser = {

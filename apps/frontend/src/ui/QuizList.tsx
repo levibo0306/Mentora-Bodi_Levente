@@ -152,7 +152,7 @@ export const QuizList = ({ onEdit, topicId: fixedTopicId = null, hideFilter = fa
                 >
                   {/* Mode jelző */}
                   <span className={`mode-badge ${quiz.mode || "practice"}`}>
-                    {quiz.mode === "assessment" ? "🏆 Assessment" : "📖 Practice"}
+                    {quiz.mode === "assessment" ? "🏆 Vizsga" : "📖 Gyakorlás"}
                   </span>
 
                   {/* Nehézség (AVG kérdés difficulty alapján) */}
@@ -189,50 +189,30 @@ export const QuizList = ({ onEdit, topicId: fixedTopicId = null, hideFilter = fa
                   </div>
                 </div>
 
-                <div className="quiz-actions" style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <div className="quiz-actions quiz-primary-actions">
                   <Link 
                     to={`/play/${quiz.id}`} 
                     className="btn btn-primary"
-                    style={{ flex: '1 1 calc(50% - 5px)', minWidth: '120px' }}
                   >
                     ▶ Indítás
                   </Link>
                   {quiz.is_owner !== false && <button
                       onClick={() => handleShare(quiz)}
-                      className="btn"
-                      style={{
-                        flex: '1 1 calc(50% - 5px)',
-                        minWidth: '120px',
-                        background: 'linear-gradient(135deg, var(--success), #00d4aa)',
-                        color: 'white',
-                        boxShadow: '0 4px 15px rgba(6, 214, 160, 0.2)'
-                      }}
-                    >
-                      📤 Megosztás
-                    </button>}
-                  <button
-                    onClick={() => toggleOffline(quiz)}
-                    className="btn btn-secondary"
-                    disabled={offlineBusyId === quiz.id}
-                    style={{ flex: '1 1 calc(50% - 5px)', minWidth: '120px' }}
-                  >
-                    {offlineBusyId === quiz.id ? "Mentés..." : offlineIds.has(quiz.id) ? "Offline törlése" : "Offline letöltés"}
-                  </button>
-                  {quiz.is_owner !== false && <button
-                      onClick={() => onEdit(quiz.id)}
                       className="btn btn-secondary"
-                      style={{ flex: '1 1 calc(50% - 5px)', minWidth: '120px' }}
                     >
-                      ✏️ Szerkesztés
-                    </button>}
-                  {quiz.is_owner !== false && <button
-                      onClick={() => handleDelete(quiz.id)}
-                      className="btn btn-danger-soft"
-                      style={{ flex: '1 1 calc(50% - 5px)', minWidth: '120px' }}
-                    >
-                      🗑️ Törlés
+                      Megosztás
                     </button>}
                 </div>
+                <details className="quiz-more-actions">
+                  <summary>További lehetőségek</summary>
+                  <div className="quiz-actions">
+                    <button onClick={() => toggleOffline(quiz)} className="btn btn-secondary" disabled={offlineBusyId === quiz.id}>
+                      {offlineBusyId === quiz.id ? "Mentés..." : offlineIds.has(quiz.id) ? "Offline példány törlése" : "Mentés offline használatra"}
+                    </button>
+                    {quiz.is_owner !== false && <button onClick={() => onEdit(quiz.id)} className="btn btn-secondary">Szerkesztés</button>}
+                    {quiz.is_owner !== false && <button onClick={() => handleDelete(quiz.id)} className="btn btn-danger-soft">Törlés</button>}
+                  </div>
+                </details>
               </div>
             </div>
           );

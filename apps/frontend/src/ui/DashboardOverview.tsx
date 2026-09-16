@@ -24,11 +24,8 @@ export const DashboardOverview = () => {
 
   if (loading && !data) {
     return (
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-number">...</div>
-          <div className="stat-label">Betöltés</div>
-        </div>
+      <div className="overview-card overview-loading" aria-live="polite">
+        Áttekintés betöltése…
       </div>
     );
   }
@@ -43,33 +40,29 @@ export const DashboardOverview = () => {
       avg_score: number;
     };
     return (
-      <>
-        <div className="xp-panel">
+      <div className="overview-card teacher-overview">
+        <div className="overview-copy">
+          <span className="overview-icon" aria-hidden="true">📊</span>
           <div>
-            <div className="xp-title">Tanári áttekintés</div>
-            <div className="xp-sub">Összesített statisztikák a kvízeidről</div>
+            <div className="overview-title">Gyors áttekintés</div>
+            <div className="overview-subtitle">A legfontosabb számok a kvízeidről</div>
           </div>
-          <div className="xp-rank">👨‍🏫 Tanár</div>
         </div>
-        <div className="stats-grid">
-          <div className="stat-card">
+        <div className="overview-stats">
+          <div className="overview-stat">
             <div className="stat-number">{stats.active_quizzes ?? 0}</div>
             <div className="stat-label">Aktív kvízek</div>
           </div>
-          <div className="stat-card">
+          <div className="overview-stat">
             <div className="stat-number">{stats.total_students ?? 0}</div>
-            <div className="stat-label">Diákok száma</div>
+            <div className="stat-label">Diák</div>
           </div>
-          <div className="stat-card">
-            <div className="stat-number">{stats.total_attempts ?? 0}</div>
-            <div className="stat-label">Összes kitöltés</div>
-          </div>
-          <div className="stat-card">
+          <div className="overview-stat">
             <div className="stat-number">{stats.avg_score ?? 0}%</div>
-            <div className="stat-label">Átlag pontszám</div>
+            <div className="stat-label">Átlag</div>
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -83,74 +76,51 @@ export const DashboardOverview = () => {
   const nextLevel = data.next_level_xp ?? ((data.level ?? 1) * 100);
   const xpPercent =
     nextLevel > 0 ? Math.min(100, Math.round(((data.xp ?? 0) / nextLevel) * 100)) : 0;
+  const nextMission = (data.daily_missions ?? []).find((mission) => !mission.completed_at && mission.progress < mission.target)
+    ?? (data.daily_missions ?? [])[0];
 
   return (
-    <>
-      <div className="xp-panel">
-        <div>
-          <div className="xp-title">Szint {data.level ?? 1}</div>
-          <div className="xp-sub">
-            {data.xp ?? 0} / {nextLevel} XP · 🔥 {data.streak_days ?? 0} napos streak
-          </div>
-          <div className="xp-bar">
-            <div className="xp-bar-fill" style={{ width: `${xpPercent}%` }} />
+    <div className="overview-card student-overview">
+      <div className="overview-progress">
+        <div className="overview-copy">
+          <span className="overview-icon" aria-hidden="true">🌱</span>
+          <div>
+            <div className="overview-title">{data.rank || `${data.level ?? 1}. szint`}</div>
+            <div className="overview-subtitle">
+              {nextLevel - (data.xp ?? 0) > 0 ? `${nextLevel - (data.xp ?? 0)} XP a következő szintig` : "A következő szint elérve"}
+            </div>
           </div>
         </div>
-        <div className="xp-rank">🏅 {data.rank}</div>
+        <div className="xp-bar" aria-label={`${xpPercent}% teljesítve`}>
+          <div className="xp-bar-fill" style={{ width: `${xpPercent}%` }} />
+        </div>
+        <div className="progress-meta">
+          <span>{data.xp ?? 0} / {nextLevel} XP</span>
+          <span>🔥 {data.streak_days ?? 0} nap</span>
+        </div>
       </div>
 
-      <div className="mission-grid">
-        {(data.daily_missions ?? []).slice(0, 3).map((m) => {
-          const progress = Math.min(100, Math.round((m.progress / m.target) * 100));
-          const done = !!m.completed_at || m.progress >= m.target;
-          return (
-            <div key={m.id} className={`mission-card ${done ? "completed" : ""}`}>
-              <div className="mission-title">{m.title}</div>
-              <div className="mission-desc">{m.description}</div>
-              <div className="mission-progress">
-                <div className="mission-bar">
-                  <div className="mission-bar-fill" style={{ width: `${progress}%` }} />
-                </div>
-                <div className="mission-meta">
-                  {m.progress}/{m.target} · +{m.xp_reward} XP
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {nextMission && (
+        <div className="overview-mission">
+          <span className="eyebrow">Mai cél</span>
+          <div className="mission-title">{nextMission.title}</div>
+          <div className="mission-desc">{nextMission.description}</div>
+          <div className="mission-meta">
+            {nextMission.progress}/{nextMission.target} kész · +{nextMission.xp_reward} XP
+          </div>
+        </div>
+      )}
 
-      <div className="stats-grid">
-        <div className="stat-card">
+      <div className="overview-stats student-quick-stats" aria-label="Tanulási statisztikák">
+        <div className="overview-stat">
           <div className="stat-number">{stats.quizzes_completed ?? 0}</div>
-          <div className="stat-label">Kvízek kitöltve</div>
+          <div className="stat-label">Kitöltött kvíz</div>
         </div>
-        <div className="stat-card">
+        <div className="overview-stat">
           <div className="stat-number">{stats.avg_score ?? 0}%</div>
-          <div className="stat-label">Átlag pontszám</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{stats.total_attempts ?? 0}</div>
-          <div className="stat-label">Összes próbálkozás</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{stats.badges_earned ?? 0}</div>
-          <div className="stat-label">Megszerezett badge</div>
+          <div className="stat-label">Átlag</div>
         </div>
       </div>
-
-      <div className="badge-section">
-        <h2 className="section-title">Eredményeid</h2>
-        <div className="badge-grid">
-          {data.badges.map((badge) => (
-            <div key={badge.id} className={`badge-item ${badge.earned ? "earned" : ""}`}>
-              <div className="badge-icon">{badge.icon}</div>
-              <div className="badge-name">{badge.name}</div>
-              <div className="badge-requirement">{badge.requirement}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </>
+    </div>
   );
 };

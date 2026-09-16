@@ -1,8 +1,4 @@
-// apps/frontend/src/api/quizzes.ts
-import { api } from "./http"; // Most már az 'api'-t importáljuk a te kódod alapján
-
-
-// apps/frontend/src/api/quizzes.ts
+import { api } from "./http";
 
 export interface Quiz {
   id: string;
@@ -12,7 +8,7 @@ export interface Quiz {
   topic_id?: string | null;
   owner_id?: string | null;
   is_owner?: boolean;
-  difficulty?: number;      // Ez maradjon meg a biztonság kedvéért
+  difficulty?: number;
   avg_difficulty?: number | string | null;
   question_count?: number;
   total_attempts?: number;
@@ -23,7 +19,7 @@ export interface Quiz {
 export type CreateQuizDto = {
   title: string;
   description?: string;
-  mode: 'practice' | 'assessment'; // Ezt add hozzá!
+  mode: 'practice' | 'assessment';
   difficulty?: number; 
   topic_id?: string;
 };
@@ -36,7 +32,6 @@ export type CreateQuestionDto = {
   difficulty: number; 
 };
 
-// Válaszok típusa: { kerdes_id: valasztott_index }
 export type QuizSubmission = {
   [questionId: string]: number; 
 };
@@ -80,18 +75,13 @@ export type QuizResults = {
   attempts: QuizAttempt[];
   stats: QuizQuestionStats[];
 };
-// --- API Hívások ---
-
-// Kvízek listázása
 export async function getQuizzes(topicId?: string | null) {
-  // A backend az '/api/quizzes' útvonalon figyel (lásd backend/src/index.ts)
   const qs = topicId ? `?topic_id=${encodeURIComponent(topicId)}` : "";
   return api<Quiz[]>(`/api/quizzes${qs}`);
 }
 
 export const getImportableQuizzes = () => api<Quiz[]>("/api/quizzes/importable");
 
-// Egy kvíz lekérése
 export async function getQuiz(id: string) {
   return api<Quiz>(`/api/quizzes/${id}`);
 }
@@ -112,15 +102,13 @@ export async function getAdaptiveQuizQuestions(id: string, limit = 10) {
   }));
 }
 
-// Kvíz létrehozása
 export async function createQuiz(data: CreateQuizDto) {
   return api<Quiz>("/api/quizzes", {
     method: "POST",
-    body: JSON.stringify(data), // Fontos: stringify kell, mert az api() wrappered csak a header-t állítja be
+    body: JSON.stringify(data),
   });
 }
 
-// Kvíz módosítása
 export async function updateQuiz(id: string, data: Partial<CreateQuizDto>) {
   return api<Quiz>(`/api/quizzes/${id}`, {
     method: "PUT",
@@ -128,14 +116,12 @@ export async function updateQuiz(id: string, data: Partial<CreateQuizDto>) {
   });
 }
 
-// Kvíz törlése
 export async function deleteQuiz(id: string) {
   return api<{ ok: boolean }>(`/api/quizzes/${id}`, {
     method: "DELETE",
   });
 }
 
-// Kérdés hozzáadása (EZT HASZNÁLJA A MODAL)
 export async function createQuestion(quizId: string, data: CreateQuestionDto) {
   return api<any>(`/api/quizzes/${quizId}/questions`, {
     method: "POST",

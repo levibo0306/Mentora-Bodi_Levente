@@ -103,3 +103,39 @@ test("the quiz player requests and completes a personalized question set", async
   await page.getByRole("button", { name: "Befejezés" }).click();
   await expect(page.getByText("100%")).toBeVisible();
 });
+
+test("student tab switching keeps the quiz list mounted and chat accessible", async ({ page }) => {
+  const student = { ...teacher, id: "00000000-0000-4000-8000-000000000012", username: "diak", role: "student" };
+  let quizListRequests = 0;
+
+  await page.addInitScript(({ student }) => {
+    localStorage.setItem("mentora_user", JSON.stringify(student));
+    localStorage.setItem("mentora_token", "e2e-token");
+  }, { student });
+
+  await page.route("http://localhost:3001/api/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (path === "/api/users/me/overview") return json(route, {
+      role: "student",
+      stats: { quizzes_completed: 0, total_attempts: 0, avg_score: 0, badges_earned: 0 },
+      badges: [], xp: 0, level: 1, next_level_xp: 100, rank: "Kezdő", streak_days: 0, daily_missions: [],
+    });
+    if (path === "/api/quizzes" && request.method() === "GET") {
+      quizListRequests += 1;
+      return json(route, []);
+    }
+    return json(route, []);
+  });
+
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "Csevegés megnyitása" })).toBeVisible();
+  await expect(page.getByText("Még nincs kvízed. Kezdj el egyet létrehozni!")).toBeVisible();
+  const requestsAfterInitialLoad = quizListRequests;
+  await page.getByRole("button", { name: /Kártyák/ }).click();
+  await page.getByRole("button", { name: /Kvízek/ }).click();
+  await page.getByRole("button", { name: /Témák/ }).click();
+  await page.getByRole("button", { name: /Kvízek/ }).click();
+
+  expect(quizListRequests).toBe(requestsAfterInitialLoad);
+});
