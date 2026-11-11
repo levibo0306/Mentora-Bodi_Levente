@@ -39,6 +39,23 @@ describe("backend application", () => {
     expect(query).not.toHaveBeenCalled();
   });
 
+  test("rejects malformed quiz identifiers without interrupting the server", async () => {
+    const { app } = await import("../src/index");
+    const token = signToken({
+      sub: "00000000-0000-4000-8000-000000000001",
+      email: "teacher@example.com",
+      role: "teacher",
+    });
+    const client = request(app);
+    const headers = { Authorization: `Bearer ${token}` };
+    await client.get("/api/quizzes/not-a-uuid").set(headers).expect(400);
+    await client.get("/api/quizzes/not-a-uuid/results").set(headers).expect(400);
+    await client.put("/api/quizzes/00000000-0000-4000-8000-000000000001/questions/not-a-uuid")
+      .set(headers).send({}).expect(400);
+    await client.get("/health").expect(200);
+    expect(query).not.toHaveBeenCalled();
+  });
+
   test("validates AI generation input before calling the model", async () => {
     const { app } = await import("../src/index");
     const token = signToken({

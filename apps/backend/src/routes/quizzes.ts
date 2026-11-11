@@ -152,7 +152,9 @@ quizzesRouter.get("/:id/results", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const { id } = uuidParam.parse(req.params);
+  const params = uuidParam.safeParse(req.params);
+  if (!params.success) return res.status(400).json({ error: "Érvénytelen kvízazonosító." });
+  const { id } = params.data;
 
   try {
     const check = await pool.query(
@@ -227,7 +229,9 @@ quizzesRouter.get("/:id/results", requireAuth, async (req, res) => {
 });
 
 quizzesRouter.get("/:id", requireAuth, async (req, res) => {
-  const { id } = uuidParam.parse(req.params);
+  const params = uuidParam.safeParse(req.params);
+  if (!params.success) return res.status(400).json({ error: "Érvénytelen kvízazonosító." });
+  const { id } = params.data;
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -285,8 +289,12 @@ quizzesRouter.put("/:id", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const { id } = uuidParam.parse(req.params);
-  const body = CreateQuiz.partial().parse(req.body);
+  const params = uuidParam.safeParse(req.params);
+  if (!params.success) return res.status(400).json({ error: "Érvénytelen kvízazonosító." });
+  const { id } = params.data;
+  const parsed = CreateQuiz.partial().safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Érvénytelen kvízadatok." });
+  const body = parsed.data;
 
   try {
     if (body.topic_id) {
@@ -317,7 +325,9 @@ quizzesRouter.delete("/:id", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const { id } = uuidParam.parse(req.params);
+  const params = uuidParam.safeParse(req.params);
+  if (!params.success) return res.status(400).json({ error: "Érvénytelen kvízazonosító." });
+  const { id } = params.data;
 
   try {
     const r = await pool.query("DELETE FROM quizzes WHERE id=$1 AND owner_id=$2", [id, userId]);
@@ -345,7 +355,9 @@ quizzesRouter.post("/:id/questions", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const { id } = uuidParam.parse(req.params);
+  const params = uuidParam.safeParse(req.params);
+  if (!params.success) return res.status(400).json({ error: "Érvénytelen kvízazonosító." });
+  const { id } = params.data;
 
   try {
     const body = QuestionSchema.parse(req.body);
@@ -382,9 +394,13 @@ quizzesRouter.put("/:id/questions/:qid", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const { id } = uuidParam.parse(req.params);
+  const params = uuidParam.safeParse(req.params);
+  if (!params.success) return res.status(400).json({ error: "Érvénytelen kvízazonosító." });
+  const { id } = params.data;
   const QuestionIdSchema = z.object({ qid: z.string().uuid() });
-  const { qid } = QuestionIdSchema.parse(req.params);
+  const questionParams = QuestionIdSchema.safeParse(req.params);
+  if (!questionParams.success) return res.status(400).json({ error: "Érvénytelen kérdésazonosító." });
+  const { qid } = questionParams.data;
 
   try {
     const body = QuestionSchema.parse(req.body);
