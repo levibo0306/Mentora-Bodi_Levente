@@ -555,7 +555,7 @@ quizzesRouter.post("/:id/attempt", requireAuth, async (req, res) => {
         await pool.query(
           `INSERT INTO student_question_profiles
              (user_id, question_id, attempts, correct_count, mastery_score, last_answer_correct, last_answered_at)
-           VALUES ($1, $2, 1, $3, $3, $4, now())
+           VALUES ($1, $2, 1, $3::integer, ($3::integer)::numeric, $4, now())
            ON CONFLICT (user_id, question_id) DO UPDATE SET
              attempts = student_question_profiles.attempts + 1,
              correct_count = student_question_profiles.correct_count + EXCLUDED.correct_count,
