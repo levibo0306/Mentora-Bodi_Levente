@@ -60,6 +60,7 @@ export const SharedWithMe = () => {
       } else {
         const [details, questions] = await Promise.all([getQuiz(quiz.id), getQuizQuestions(quiz.id)]);
         if (!questions.length) throw new Error("Üres kvízt nem lehet letölteni.");
+        if (details.mode === "assessment") throw new Error("A vizsgát csak online lehet kitölteni.");
         saveOfflineQuiz({ ...quiz, ...details }, questions);
         setOfflineIds((current) => new Set(current).add(quiz.id));
         setOfflineStatus(`A(z) „${quiz.title}” internet nélkül is kitölthető.`);
@@ -192,14 +193,14 @@ export const SharedWithMe = () => {
               >
                 ▶ Kvíz Megnyitása
               </Link>
-              <button
+              {(quiz.mode !== "assessment" || offlineIds.has(quiz.id)) && <button
                 onClick={() => toggleOffline(quiz)}
                 className="btn btn-secondary"
                 disabled={offlineBusyId === quiz.id}
                 style={{ flex: '1', textAlign: 'center' }}
               >
                 {offlineBusyId === quiz.id ? "Mentés..." : offlineIds.has(quiz.id) ? "Offline törlése" : "Offline letöltés"}
-              </button>
+              </button>}
               {quiz.allow_reshare && (
                 <button
                   onClick={() => handleReshare(quiz)}

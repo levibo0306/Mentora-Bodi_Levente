@@ -4,6 +4,7 @@ import { pool } from "../db";
 import { requireAuth } from "../middleware/auth";
 import { addXp, updateDailyMissionsOnAttempt } from "../services/gamification";
 import { rankAdaptiveQuestions } from "../services/adaptive";
+import { checkAssessment, QuizAttemptError, saveQuizAttempt } from "../services/quizAttempts";
 import { quizGenerationRouter } from "./quizGeneration";
 
 export const quizzesRouter = Router();
@@ -423,6 +424,8 @@ quizzesRouter.get("/:id/questions", requireAuth, async (req, res) => {
 
   try {
     if (!await canAccessQuiz(id, userId)) return res.status(404).json({ error: "A kvíz nem érhető el." });
+    const exam = await pool.query("SELECT 1 FROM quizzes WHERE id=$1 AND mode='assessment' AND owner_id IS DISTINCT FROM $2", [id, userId]);
+    if (exam.rowCount) return res.status(403).json({ error: "A vizsgát csak online lehet kitölteni." });
     const r = await pool.query(
       `SELECT id, quiz_id, prompt, options, correct_index, explanation, difficulty, total_attempts, correct_attempts
        FROM questions
@@ -447,6 +450,9 @@ quizzesRouter.get("/:id/adaptive-questions", requireAuth, async (req, res) => {
 
   try {
     if (!await canAccessQuiz(id, userId)) return res.status(404).json({ error: "A kvíz nem érhető el." });
+
+    const quiz = await pool.query("SELECT mode FROM quizzes WHERE id=$1", [id]);
+    if (quiz.rows[0]?.mode === "assessment") await checkAssessment(pool, id, userId);
 
     const [questionResult, abilityResult] = await Promise.all([
       pool.query(
@@ -486,6 +492,7 @@ quizzesRouter.get("/:id/adaptive-questions", requireAuth, async (req, res) => {
 
     res.json(questions);
   } catch (error) {
+    if (error instanceof QuizAttemptError) return res.status(error.status).json({ error: error.message });
     console.error(error);
     res.status(500).json({ error: "Nem sikerült összeállítani a személyre szabott kérdéssort." });
   }
@@ -510,76 +517,80 @@ quizzesRouter.post("/:id/attempt", requireAuth, async (req, res) => {
 
   try {
     if (!await canAccessQuiz(id, userId)) return res.status(404).json({ error: "A kvíz nem érhető el." });
-    // Kérdések lekérése
-    const answeredQuestionIds = Object.keys(answers);
-    if (!answeredQuestionIds.length) return res.status(400).json({ error: "Legalább egy választ adj meg." });
-    const qRes = await pool.query(
-      "SELECT id, correct_index FROM questions WHERE quiz_id=$1 AND id = ANY($2::uuid[])",
-      [id, answeredQuestionIds]
-    );
-    const questions = qRes.rows as Array<{ id: string; correct_index: number }>;
-    if (questions.length !== answeredQuestionIds.length) {
-      return res.status(400).json({ error: "A válaszok között érvénytelen kérdés szerepel." });
-    }
+    const { score, total, correct, attemptId } = await saveQuizAttempt(id, userId, async (client) => {
+      // Kérdések lekérése
+      const answeredQuestionIds = Object.keys(answers);
+      if (!answeredQuestionIds.length) throw new QuizAttemptError(400, "Legalább egy választ adj meg.");
+      const qRes = await client.query(
+        "SELECT id, correct_index FROM questions WHERE quiz_id=$1 AND id = ANY($2::uuid[])",
+        [id, answeredQuestionIds]
+      );
+      const questions = qRes.rows as Array<{ id: string; correct_index: number }>;
+      if (questions.length !== answeredQuestionIds.length) {
+        throw new QuizAttemptError(400, "A válaszok között érvénytelen kérdés szerepel.");
+      }
 
-    let correctCount = 0;
+      let correctCount = 0;
 
-    // 1) Kiértékelés + adaptív stat frissítés
-    for (const q of questions) {
-      const picked = answers[q.id];
-      const isCorrect = picked === q.correct_index;
-      if (isCorrect) correctCount++;
+      // 1) Kiértékelés + adaptív stat frissítés
+      for (const q of questions) {
+        const picked = answers[q.id];
+        const isCorrect = picked === q.correct_index;
+        if (isCorrect) correctCount++;
 
-      // 1 UPDATE: total_attempts, correct_attempts, difficulty (a már növelt értékekkel számolva)
-      await pool.query(
-        `UPDATE questions
-         SET
-           total_attempts   = total_attempts + 1,
-           correct_attempts = correct_attempts + $1,
-           difficulty = CASE
-             WHEN (total_attempts + 1) >= 5
-                  AND ((correct_attempts + $1)::float / (total_attempts + 1)) > 0.8
-               THEN GREATEST(1, COALESCE(difficulty, 3) - 1)
+        // 1 UPDATE: total_attempts, correct_attempts, difficulty (a már növelt értékekkel számolva)
+        await client.query(
+          `UPDATE questions
+           SET
+             total_attempts   = total_attempts + 1,
+             correct_attempts = correct_attempts + $1,
+             difficulty = CASE
+               WHEN (total_attempts + 1) >= 5
+                    AND ((correct_attempts + $1)::float / (total_attempts + 1)) > 0.8
+                 THEN GREATEST(1, COALESCE(difficulty, 3) - 1)
 
-             WHEN (total_attempts + 1) >= 5
-                  AND ((correct_attempts + $1)::float / (total_attempts + 1)) < 0.2
-               THEN LEAST(5, COALESCE(difficulty, 3) + 1)
+               WHEN (total_attempts + 1) >= 5
+                    AND ((correct_attempts + $1)::float / (total_attempts + 1)) < 0.2
+                 THEN LEAST(5, COALESCE(difficulty, 3) + 1)
 
-             ELSE COALESCE(difficulty, 3)
-           END
-         WHERE id = $2`,
-        [isCorrect ? 1 : 0, q.id]
+               ELSE COALESCE(difficulty, 3)
+             END
+           WHERE id = $2`,
+          [isCorrect ? 1 : 0, q.id]
+        );
+
+        if (req.user?.role === "student") {
+          await client.query(
+            `INSERT INTO student_question_profiles
+               (user_id, question_id, attempts, correct_count, mastery_score, last_answer_correct, last_answered_at)
+             VALUES ($1, $2, 1, $3::integer, ($3::integer)::numeric, $4, now())
+             ON CONFLICT (user_id, question_id) DO UPDATE SET
+               attempts = student_question_profiles.attempts + 1,
+               correct_count = student_question_profiles.correct_count + EXCLUDED.correct_count,
+               mastery_score = (student_question_profiles.correct_count + EXCLUDED.correct_count)::numeric
+                 / (student_question_profiles.attempts + 1),
+               last_answer_correct = EXCLUDED.last_answer_correct,
+               last_answered_at = now()`,
+            [userId, q.id, isCorrect ? 1 : 0, isCorrect],
+          );
+        }
+      }
+
+      const score =
+        questions.length > 0
+          ? Math.round((correctCount / questions.length) * 100)
+          : 0;
+
+      // 2) Attempt mentése (answers jsonb, mehet natívan)
+      const att = await client.query(
+        `INSERT INTO attempts (quiz_id, user_id, answers, score)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id`,
+        [id, userId, answers, score]
       );
 
-      if (req.user?.role === "student") {
-        await pool.query(
-          `INSERT INTO student_question_profiles
-             (user_id, question_id, attempts, correct_count, mastery_score, last_answer_correct, last_answered_at)
-           VALUES ($1, $2, 1, $3::integer, ($3::integer)::numeric, $4, now())
-           ON CONFLICT (user_id, question_id) DO UPDATE SET
-             attempts = student_question_profiles.attempts + 1,
-             correct_count = student_question_profiles.correct_count + EXCLUDED.correct_count,
-             mastery_score = (student_question_profiles.correct_count + EXCLUDED.correct_count)::numeric
-               / (student_question_profiles.attempts + 1),
-             last_answer_correct = EXCLUDED.last_answer_correct,
-             last_answered_at = now()`,
-          [userId, q.id, isCorrect ? 1 : 0, isCorrect],
-        );
-      }
-    }
-
-    const score =
-      questions.length > 0
-        ? Math.round((correctCount / questions.length) * 100)
-        : 0;
-
-    // 2) Attempt mentése (answers jsonb, mehet natívan)
-    const att = await pool.query(
-      `INSERT INTO attempts (quiz_id, user_id, answers, score)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id`,
-      [id, userId, answers, score]
-    );
+      return { score, total: questions.length, correct: correctCount, attemptId: att.rows[0].id };
+    });
 
     // 3) XP jóváírás
     const xpReward = Math.ceil(score / 10);
@@ -589,12 +600,13 @@ quizzesRouter.post("/:id/attempt", requireAuth, async (req, res) => {
 
     res.json({
       score,
-      total: questions.length,
-      correct: correctCount,
+      total,
+      correct,
       xp_gained: xpReward,
-      id: att.rows[0].id,
+      id: attemptId,
     });
   } catch (err) {
+    if (err instanceof QuizAttemptError) return res.status(err.status).json({ error: err.message });
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }

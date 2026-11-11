@@ -30,7 +30,7 @@ export function QuizBasicsStep(props: Props) {
         <label>Mód</label>
         <select value={props.mode} onChange={(event) => props.onModeChange(event.target.value as QuizMode)}>
           <option value="practice">Gyakorlás</option>
-          <option value="assessment">Vizsga</option>
+          <option value="assessment">Vizsga (egyszer tölthető ki)</option>
         </select>
       </div>
       <div className="input-group">

@@ -106,6 +106,7 @@ export const QuizList = ({ onEdit, topicId: fixedTopicId = null, hideFilter = fa
       } else {
         const [details, questions] = await Promise.all([getQuiz(quiz.id), getQuizQuestions(quiz.id)]);
         if (questions.length === 0) throw new Error("Üres kvízt nem lehet letölteni.");
+        if (details.mode === "assessment") throw new Error("A vizsgát csak online lehet kitölteni.");
         saveOfflineQuiz({ ...quiz, ...details }, questions);
         setOfflineIds((ids) => new Set(ids).add(quiz.id));
         setOfflineStatus(`A(z) „${quiz.title}” internet nélkül is kitölthető.`);
@@ -207,9 +208,9 @@ export const QuizList = ({ onEdit, topicId: fixedTopicId = null, hideFilter = fa
                 <details className="quiz-more-actions">
                   <summary>További lehetőségek</summary>
                   <div className="quiz-actions">
-                    <button onClick={() => toggleOffline(quiz)} className="btn btn-secondary" disabled={offlineBusyId === quiz.id}>
+                    {(quiz.mode !== "assessment" || offlineIds.has(quiz.id)) && <button onClick={() => toggleOffline(quiz)} className="btn btn-secondary" disabled={offlineBusyId === quiz.id}>
                       {offlineBusyId === quiz.id ? "Mentés..." : offlineIds.has(quiz.id) ? "Offline példány törlése" : "Mentés offline használatra"}
-                    </button>
+                    </button>}
                     {quiz.is_owner !== false && <button onClick={() => onEdit(quiz.id)} className="btn btn-secondary">Szerkesztés</button>}
                     {quiz.is_owner !== false && <button onClick={() => handleDelete(quiz.id)} className="btn btn-danger-soft">Törlés</button>}
                   </div>

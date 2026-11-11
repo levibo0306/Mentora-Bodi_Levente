@@ -76,7 +76,7 @@ export const TopicsPanel = () => {
       <div className="section-header">
         <div>
           <h3>Témák</h3>
-          <p className="section-help">Egy téma közös polcra rendezi a hozzá tartozó kvízeket és Flashcards csomagokat. Megosztáskor a teljes tanulási egység eljut a címzetthez.</p>
+          <p className="section-help">Egy téma közös csoportba rendezi a hozzá tartozó kvízeket és Flashcards csomagokat. Megosztáskor a teljes tanulási egység eljut a címzetthez.</p>
         </div>
       </div>
 

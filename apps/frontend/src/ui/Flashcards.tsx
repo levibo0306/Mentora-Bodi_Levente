@@ -190,7 +190,6 @@ export const Flashcards = ({ topicId: fixedTopicId = null }: Props) => {
   }
 
   return <div className="flashcard-workspace">
-    <section className="pack-intro"><div><span className="eyebrow">Flashcards</span><h2>Fogalmak, egy helyen.</h2><p>A téma a tantárgyi polc, a Flashcards csomag pedig egy együtt gyakorolható fogalomkészlet.</p></div><div className="pack-count"><strong>{packs.length}</strong><span>csomag</span></div></section>
     <div className="pack-tools">
       <details className="card pack-builder" open={packs.length === 0 ? true : undefined}>
         <summary>+ Új Flashcards csomag összeállítása</summary>

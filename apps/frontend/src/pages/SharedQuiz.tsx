@@ -86,7 +86,7 @@ export function SharedQuiz() {
       }));
     } catch (reason) {
       console.error(reason);
-      alert("Hiba történt a kiértékelés során");
+      alert(getErrorMessage(reason, "Hiba történt a kiértékelés során"));
     } finally {
       setSubmitting(false);
     }

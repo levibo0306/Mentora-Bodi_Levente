@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getAdaptiveQuizQuestions, submitQuizAttempt, QuizResult } from "../api/quizzes";
+import { ApiError, getErrorMessage } from "../api/http";
 import { getOfflineQuiz, queueOfflineAttempt } from "../infra/offlineQuizzes";
 
 type Question = {
@@ -27,9 +28,13 @@ export const QuizPlayer = () => {
     
     getAdaptiveQuizQuestions(id)
       .then((data) => setQuestions(data))
-      .catch(() => {
+      .catch((error: unknown) => {
+        if (error instanceof ApiError && error.status !== 0 && error.status < 500) {
+          setLoadError(error.message);
+          return;
+        }
         const downloaded = getOfflineQuiz(id);
-        if (downloaded) {
+        if (downloaded && downloaded.quiz.mode !== "assessment") {
           setQuestions(downloaded.questions);
           setOffline(true);
           return;
@@ -66,7 +71,7 @@ export const QuizPlayer = () => {
       const res = await submitQuizAttempt(id, answers);
       setResult(res);
     } catch (e) {
-      alert("Hiba a kiértékeléskor");
+      alert(getErrorMessage(e, "Hiba a kiértékeléskor"));
     } finally {
       setLoading(false);
     }
@@ -169,7 +174,6 @@ export const QuizPlayer = () => {
         </button>
       </div>
       {offline && <div className="offline-banner">Offline mód</div>}
-      {!offline && <div className="adaptive-banner">Személyre szabott gyakorlás · a kérdéssor a korábbi eredményeidhez igazodik</div>}
 
       {/* Kérdés Kártya */}
       <div className="question-card">
