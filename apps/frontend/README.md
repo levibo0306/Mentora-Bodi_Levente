@@ -6,9 +6,11 @@
 
 ## Futtatás
 
+A repó gyökeréből:
+
 ```bash
-npm install
-npm run dev
+npm ci
+npm run dev:frontend
 ```
 
 Alapértelmezett cím: `http://localhost:5173`
@@ -27,4 +29,4 @@ npm run test:ci
 ```
 
 ## Környezeti változók
-- `.env.example` → másold `.env.local`-ba, ha szükséges.
+- A helyi Vite proxyhoz a `VITE_API_BASE_URL` maradjon üres. Külön API-kiszolgálónál a mintát másold `.env` néven, és add meg az API URL-jét.

@@ -8,9 +8,11 @@
 
 ## Futtatás
 
+A repó gyökeréből:
+
 ```bash
-npm install
-npm run dev
+npm ci
+npm run dev:backend
 ```
 
 Alapértelmezett port: `3001`

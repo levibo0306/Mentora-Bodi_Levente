@@ -16,14 +16,14 @@ mentora-prototype/
 
 ### Előfeltételek
 - Node.js 20.19+ vagy 22.12+ (ajánlott: 22 LTS)
-- PostgreSQL (helyben futó szerver)
+- PostgreSQL 18 és a hozzá tartozó `psql` kliens (a mellékelt séma PostgreSQL 18.1-ből készült)
 - Ollama (opcionális, a helyi AI kérdésgeneráláshoz)
 
 ### Telepítés
 A repó gyökérből:
 
 ```bash
-npm run install:all
+npm ci
 ```
 
 ### Adatbázis
@@ -35,7 +35,10 @@ Példa:
 ```
 DATABASE_URL=postgres://USER:PASSWORD@localhost:5432/mentora
 PORT=3001
+JWT_SECRET=replace-with-a-long-random-secret
 ```
+
+A `JWT_SECRET` példaértékét cseréld hosszú, véletlen titokra.
 
 ### AI kérdésgenerálás
 
@@ -65,7 +68,7 @@ A kvízkészítő második lépésében illeszd be a tananyagot, vagy tölts fel
 Az adatbázisséma első betöltése után hozd létre a tesztfiókokat:
 
 ```bash
-(set -a; source apps/backend/.env; set +a; psql "$DATABASE_URL" -f apps/backend/sql/schema.sql)
+(set -a; source apps/backend/.env; set +a; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/backend/sql/schema.sql)
 npm run migrate
 npm run seed
 ```
@@ -104,7 +107,7 @@ A backend `.env` fontosabb mezői:
 - `CORS_ORIGINS` – engedélyezett frontend origine(k), vesszővel elválasztva
 - `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `OLLAMA_API_KEY` – helyi vagy távoli Ollama szolgáltatás
 
-A frontendhez másold az `apps/frontend/.env.example` fájlt `.env` néven. Publikus telepítésnél a `VITE_API_BASE_URL` értéke a backend HTTPS URL-je legyen.
+A helyi Vite proxyhoz hagyd üresen a `VITE_API_BASE_URL` értékét az `apps/frontend/.env` fájlban (vagy hagyd el ezt a fájlt). Ha a frontend és az API eltérő címen fut, add meg a backend URL-jét, és a backend `CORS_ORIGINS` listájába vedd fel a frontend originjét. Publikus telepítésnél használj HTTPS-t.
 
 ## 3) Tesztek
 
@@ -119,17 +122,14 @@ npm run test:backend
 npm run test:e2e
 ```
 
-Az E2E tesztek első CI-futtatása előtt telepítsd a Playwright Chromiumot:
-```bash
-npx playwright install chromium
-```
+A helyi E2E-futtatás telepített Google Chrome-ot használ. A GitHub Actions E2E feladata a lockfájlban szereplő Playwright 1.63.0-hoz illeszkedő konténerben fut, amely tartalmazza a Chromiumot és a rendszerfüggőségeit. A tesztek helyettesített API-válaszokat használnak, ezért nem igényelnek futó backendet.
 
 Az összes teszt egymás után:
 ```bash
 npm run test:all
 ```
 
-Typecheck, backend tesztek, coverage és production build egy parancsban:
+Típusellenőrzés, backend- és frontendtesztek, frontend-lefedettség és build egy parancsban. Ez a parancs nem futtatja a böngészős teszteket:
 ```bash
 npm run verify
 ```
@@ -141,7 +141,7 @@ npm run test:frontend:ci
 
 ## 4) Dokumentáció
 
-A részletes dokumentumok a `docs/` mappában vannak (PRD/ADR, Sprint 1-2 anyagok, prototype).
+Az elektronikus melléklet válogatott dokumentációt tartalmaz a `docs/` mappában. A következő dokumentumok a teljes Git-repóban érhetők el:
 A végső beadás lépései: [`docs/submission/CHECKLIST.md`](docs/submission/CHECKLIST.md).
 A teljes technikai audit és a nyitott javaslatok: [`docs/submission/AUDIT.md`](docs/submission/AUDIT.md).
 A teljes, kezdőknek szánt működési és React-kézikönyv: [`docs/MENTORA_KEZIKONYV.md`](docs/MENTORA_KEZIKONYV.md).
@@ -150,4 +150,4 @@ A teljes, kezdőknek szánt működési és React-kézikönyv: [`docs/MENTORA_KE
 
 A frontend éles buildje előre gyorsítótárazza a betöltéshez szükséges fájlokat. Helyben a futó backend mellett indítsd el a frontendet az `npm run build`, majd az `npm run preview` parancsokkal. Ha a frontend külön API-címet használ, az legyen elérhető a buildben beállított címen; a helyi proxy használatához a `VITE_API_BASE_URL` maradjon üresen.
 
-Jelentkezz be online, tölts le egy gyakorlókvízt, majd ugyanabban a böngészőben próbáld megnyitni hálózat nélkül. A vizsgakvízhez szerverkapcsolat szükséges. Új vizsgához használj új kvízt, ha egy korábbi gyakorlókvíz megoldásait már megosztottad vagy letöltötték.
+Jelentkezz be online, tölts le egy gyakorlókvízt, majd ugyanabban a böngészőben kapcsold ki a hálózatot, frissítsd az oldalt, és nyisd meg a mentett kvízt. A vizsgakvízhez szerverkapcsolat szükséges. Új vizsgához használj új kvízt, ha egy korábbi gyakorlókvíz megoldásait már megosztottad vagy letöltötték.
