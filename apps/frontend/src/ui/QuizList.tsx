@@ -4,7 +4,7 @@ import { getQuiz, getQuizQuestions, getQuizzes, Quiz, deleteQuiz } from "../api/
 import { getTopics, Topic } from "../api/topics";
 import { ShareModal } from "./ShareModal";
 import { listOfflineQuizzes, removeOfflineQuiz, saveOfflineQuiz } from "../infra/offlineQuizzes";
-import { getErrorMessage } from "../api/http";
+import { ApiError, getErrorMessage } from "../api/http";
 
 interface Props {
   onEdit: (id: string) => void;
@@ -48,7 +48,13 @@ export const QuizList = ({ onEdit, topicId: fixedTopicId = null, hideFilter = fa
       const data = await getQuizzes(topicId);
       setQuizzes(data);
     } catch (error) {
-      console.error("Nem sikerült betölteni a kvízeket", error);
+      if (error instanceof ApiError && (error.status === 0 || error.status >= 500)) {
+        setQuizzes(listOfflineQuizzes().map(({ quiz }) => quiz).filter(
+          (quiz) => quiz.mode !== "assessment" && quiz.is_owner !== false && (!topicId || quiz.topic_id === topicId),
+        ));
+      } else {
+        setQuizzes([]);
+      }
     } finally {
       setLoading(false);
     }

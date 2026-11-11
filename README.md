@@ -15,7 +15,7 @@ mentora-prototype/
 ## 2) Gyors indítás (lokál)
 
 ### Előfeltételek
-- Node.js 18+ (ajánlott: 20 LTS)
+- Node.js 20.19+ vagy 22.12+ (ajánlott: 22 LTS)
 - PostgreSQL (helyben futó szerver)
 - Ollama (opcionális, a helyi AI kérdésgeneráláshoz)
 
@@ -145,3 +145,9 @@ A részletes dokumentumok a `docs/` mappában vannak (PRD/ADR, Sprint 1-2 anyago
 A végső beadás lépései: [`docs/submission/CHECKLIST.md`](docs/submission/CHECKLIST.md).
 A teljes technikai audit és a nyitott javaslatok: [`docs/submission/AUDIT.md`](docs/submission/AUDIT.md).
 A teljes, kezdőknek szánt működési és React-kézikönyv: [`docs/MENTORA_KEZIKONYV.md`](docs/MENTORA_KEZIKONYV.md).
+
+### Offline gyakorlás kipróbálása
+
+A frontend éles buildje előre gyorsítótárazza a betöltéshez szükséges fájlokat. Helyben a futó backend mellett indítsd el a frontendet az `npm run build`, majd az `npm run preview` parancsokkal. Ha a frontend külön API-címet használ, az legyen elérhető a buildben beállított címen; a helyi proxy használatához a `VITE_API_BASE_URL` maradjon üresen.
+
+Jelentkezz be online, tölts le egy gyakorlókvízt, majd ugyanabban a böngészőben próbáld megnyitni hálózat nélkül. A vizsgakvízhez szerverkapcsolat szükséges. Új vizsgához használj új kvízt, ha egy korábbi gyakorlókvíz megoldásait már megosztottad vagy letöltötték.

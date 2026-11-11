@@ -105,7 +105,9 @@ flashcardsRouter.post("/packs", requireAuth, async (req, res) => {
 
 flashcardsRouter.post("/packs/import-quiz", requireAuth, async (req, res) => {
   const userId = req.user.sub;
-  const { quiz_id, title } = z.object({ quiz_id: uuid, title: z.string().trim().min(2).max(120).optional() }).parse(req.body);
+  const parsed = z.object({ quiz_id: uuid, title: z.string().trim().min(2).max(120).optional() }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Érvénytelen kvízimport." });
+  const { quiz_id, title } = parsed.data;
   const client = await pool.connect();
   try {
     const quizResult = await client.query(
@@ -115,6 +117,7 @@ flashcardsRouter.post("/packs/import-quiz", requireAuth, async (req, res) => {
     );
     if (!quizResult.rowCount) return res.status(404).json({ error: "A kvíz nem érhető el." });
     const quiz = quizResult.rows[0];
+    if (quiz.mode === "assessment") return res.status(403).json({ error: "Vizsgakvízből nem készíthető kártyacsomag." });
     const questions = await client.query(
       "SELECT prompt,options,correct_index,explanation FROM questions WHERE quiz_id=$1 ORDER BY id", [quiz_id]
     );

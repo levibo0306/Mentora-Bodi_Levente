@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, getErrorMessage } from "../api/http";
+import { api, ApiError, getErrorMessage } from "../api/http";
 import { ShareModal } from "./ShareModal";
 import { getQuiz, getQuizQuestions, type Quiz } from "../api/quizzes";
 import { listOfflineQuizzes, removeOfflineQuiz, saveOfflineQuiz } from "../infra/offlineQuizzes";
@@ -34,7 +34,16 @@ export const SharedWithMe = () => {
       const data = await api<SharedQuiz[]>("/api/quizzes/shared-with-me");
       setSharedQuizzes(data);
     } catch (error) {
-      console.error("Nem sikerült betölteni a megosztott kvízeket", error);
+      if (error instanceof ApiError && (error.status === 0 || error.status >= 500)) {
+        setSharedQuizzes(listOfflineQuizzes().filter(
+          ({ quiz }) => quiz.mode !== "assessment" && quiz.is_owner === false,
+        ).map(({ quiz, questions, downloadedAt }) => ({
+          ...quiz, question_count: questions.length, owner_display: null,
+          shared_by_display: null, shared_at: downloadedAt, token: "", allow_reshare: false,
+        })));
+      } else {
+        setSharedQuizzes([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -61,7 +70,7 @@ export const SharedWithMe = () => {
         const [details, questions] = await Promise.all([getQuiz(quiz.id), getQuizQuestions(quiz.id)]);
         if (!questions.length) throw new Error("Üres kvízt nem lehet letölteni.");
         if (details.mode === "assessment") throw new Error("A vizsgát csak online lehet kitölteni.");
-        saveOfflineQuiz({ ...quiz, ...details }, questions);
+        saveOfflineQuiz({ ...quiz, ...details, is_owner: false }, questions);
         setOfflineIds((current) => new Set(current).add(quiz.id));
         setOfflineStatus(`A(z) „${quiz.title}” internet nélkül is kitölthető.`);
       }

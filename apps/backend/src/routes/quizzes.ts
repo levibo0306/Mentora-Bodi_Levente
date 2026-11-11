@@ -4,7 +4,7 @@ import { pool } from "../db";
 import { requireAuth } from "../middleware/auth";
 import { addXp, updateDailyMissionsOnAttempt } from "../services/gamification";
 import { rankAdaptiveQuestions } from "../services/adaptive";
-import { checkAssessment, QuizAttemptError, saveQuizAttempt } from "../services/quizAttempts";
+import { checkAssessment, getAssessmentQuestions, QuizAttemptError, quizSubmission, saveQuizAttempt, validateAssessmentAnswers } from "../services/quizAttempts";
 import { quizGenerationRouter } from "./quizGeneration";
 
 export const quizzesRouter = Router();
@@ -20,7 +20,7 @@ async function canAccessQuiz(quizId: string, userId: string) {
     `SELECT 1 FROM quizzes q
      WHERE q.id=$1 AND (
        q.owner_id=$2 OR q.owner_id IS NULL
-       OR EXISTS (SELECT 1 FROM quiz_shares qs WHERE qs.quiz_id=q.id AND qs.recipient_id=$2)
+       OR EXISTS (SELECT 1 FROM quiz_shares qs WHERE qs.quiz_id=q.id AND qs.recipient_id=$2 AND (q.mode IS DISTINCT FROM 'assessment' OR qs.shared_by=q.owner_id))
        OR EXISTS (SELECT 1 FROM topic_shares ts WHERE ts.topic_id=q.topic_id AND ts.recipient_id=$2)
      )`,
     [quizId, userId]
@@ -108,7 +108,7 @@ quizzesRouter.get("/shared-with-me", requireAuth, async (req, res) => {
           q.id, q.title, q.description, q.mode, q.owner_id, (q.owner_id=$1) AS is_owner,
           q.created_at, q.updated_at,
           s.token, s.created_at as shared_at,
-          s.allow_reshare,
+          (q.mode IS DISTINCT FROM 'assessment' AND s.allow_reshare) AS allow_reshare,
           COALESCE(owner.username, owner.email) as owner_display,
           COALESCE(sharer.username, sharer.email) as shared_by_display,
           (SELECT COUNT(*) FROM questions WHERE quiz_id = q.id)::int as question_count
@@ -116,7 +116,7 @@ quizzesRouter.get("/shared-with-me", requireAuth, async (req, res) => {
        JOIN quizzes q ON q.id = s.quiz_id
        LEFT JOIN users owner ON owner.id = q.owner_id
        LEFT JOIN users sharer ON sharer.id = s.shared_by
-       WHERE s.recipient_id = $1
+       WHERE s.recipient_id = $1 AND (q.mode IS DISTINCT FROM 'assessment' OR s.shared_by=q.owner_id)
        ORDER BY s.created_at DESC LIMIT 50`,
       [userId]
     );
@@ -137,7 +137,7 @@ quizzesRouter.get("/importable", requireAuth, async (req, res) => {
        FROM quizzes q
        LEFT JOIN quiz_shares qs ON qs.quiz_id=q.id AND qs.recipient_id=$1
        LEFT JOIN topic_shares ts ON ts.topic_id=q.topic_id AND ts.recipient_id=$1
-       WHERE q.owner_id=$1 OR qs.id IS NOT NULL OR ts.id IS NOT NULL
+       WHERE q.mode IS DISTINCT FROM 'assessment' AND (q.owner_id=$1 OR qs.id IS NOT NULL OR ts.id IS NOT NULL)
        ORDER BY q.created_at DESC`,
       [userId]
     );
@@ -259,7 +259,9 @@ quizzesRouter.post("/", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const { title, description, mode, topic_id } = CreateQuiz.parse(req.body);
+  const parsed = CreateQuiz.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Érvénytelen kvízadatok." });
+  const { title, description, mode, topic_id } = parsed.data;
 
   try {
     if (topic_id) {
@@ -418,7 +420,9 @@ quizzesRouter.put("/:id/questions/:qid", requireAuth, async (req, res) => {
 });
 
 quizzesRouter.get("/:id/questions", requireAuth, async (req, res) => {
-  const { id } = uuidParam.parse(req.params);
+  const params = uuidParam.safeParse(req.params);
+  if (!params.success) return res.status(400).json({ error: "Érvénytelen kvízazonosító." });
+  const { id } = params.data;
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -441,7 +445,9 @@ quizzesRouter.get("/:id/questions", requireAuth, async (req, res) => {
 });
 
 quizzesRouter.get("/:id/adaptive-questions", requireAuth, async (req, res) => {
-  const { id } = uuidParam.parse(req.params);
+  const params = uuidParam.safeParse(req.params);
+  if (!params.success) return res.status(400).json({ error: "Érvénytelen kvízazonosító." });
+  const { id } = params.data;
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -452,7 +458,11 @@ quizzesRouter.get("/:id/adaptive-questions", requireAuth, async (req, res) => {
     if (!await canAccessQuiz(id, userId)) return res.status(404).json({ error: "A kvíz nem érhető el." });
 
     const quiz = await pool.query("SELECT mode FROM quizzes WHERE id=$1", [id]);
-    if (quiz.rows[0]?.mode === "assessment") await checkAssessment(pool, id, userId);
+    if (quiz.rows[0]?.mode === "assessment") {
+      await checkAssessment(pool, id, userId);
+      const questions = await getAssessmentQuestions(pool, id);
+      return res.json(questions.map(({ id, prompt, options }) => ({ id, prompt, options })));
+    }
 
     const [questionResult, abilityResult] = await Promise.all([
       pool.query(
@@ -509,24 +519,25 @@ quizzesRouter.post("/:id/attempt", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const { id } = uuidParam.parse(req.params);
-
-  const { answers } = z
-    .object({ answers: z.record(z.string().uuid(), z.number().int().min(0).max(20)) })
-    .parse(req.body);
+  const params = uuidParam.safeParse(req.params);
+  const body = quizSubmission.safeParse(req.body);
+  if (!params.success || !body.success) return res.status(400).json({ error: "Érvénytelen kvízválaszok." });
+  const { id } = params.data;
+  const { answers } = body.data;
 
   try {
     if (!await canAccessQuiz(id, userId)) return res.status(404).json({ error: "A kvíz nem érhető el." });
-    const { score, total, correct, attemptId } = await saveQuizAttempt(id, userId, async (client) => {
+    const { score, total, correct, attemptId } = await saveQuizAttempt(id, userId, async (client, assessment) => {
       // Kérdések lekérése
       const answeredQuestionIds = Object.keys(answers);
       if (!answeredQuestionIds.length) throw new QuizAttemptError(400, "Legalább egy választ adj meg.");
-      const qRes = await client.query(
+      const examQuestions = assessment ? await getAssessmentQuestions(client, id) : null;
+      const questions = examQuestions ?? (await client.query<{ id: string; correct_index: number }>(
         "SELECT id, correct_index FROM questions WHERE quiz_id=$1 AND id = ANY($2::uuid[])",
         [id, answeredQuestionIds]
-      );
-      const questions = qRes.rows as Array<{ id: string; correct_index: number }>;
-      if (questions.length !== answeredQuestionIds.length) {
+      )).rows;
+      if (examQuestions) validateAssessmentAnswers(examQuestions, answers);
+      else if (questions.length !== answeredQuestionIds.length) {
         throw new QuizAttemptError(400, "A válaszok között érvénytelen kérdés szerepel.");
       }
 
@@ -534,6 +545,7 @@ quizzesRouter.post("/:id/attempt", requireAuth, async (req, res) => {
 
       // 1) Kiértékelés + adaptív stat frissítés
       for (const q of questions) {
+        if (!Object.hasOwn(answers, q.id)) continue;
         const picked = answers[q.id];
         const isCorrect = picked === q.correct_index;
         if (isCorrect) correctCount++;

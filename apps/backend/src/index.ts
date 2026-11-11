@@ -70,6 +70,10 @@ app.use("/api/feedback", feedbackRouter);
 
 // Error handler
 const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
+  if (error?.type === "entity.parse.failed") {
+    res.status(400).json({ error: "Érvénytelen JSON-adatok." });
+    return;
+  }
   metrics.errors++;
   Sentry.captureException(error);
   const message = error instanceof Error ? error.message : "server error";

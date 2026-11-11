@@ -32,7 +32,7 @@ export const TopicsPanel = () => {
   };
 
   useEffect(() => {
-    load();
+    load().catch(() => setTopics([]));
   }, []);
 
   const handleCreate = async () => {

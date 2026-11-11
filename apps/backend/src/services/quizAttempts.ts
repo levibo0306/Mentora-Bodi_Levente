@@ -1,5 +1,8 @@
 import type { PoolClient } from "pg";
+import { z } from "zod";
 import { pool } from "../db";
+
+export const quizSubmission = z.object({ answers: z.record(z.string().uuid(), z.number().int().min(0)) });
 
 export const alreadySubmitted = "Ezt a vizsgát már kitöltötted.";
 
@@ -24,7 +27,7 @@ export async function checkAssessment(
 export async function saveQuizAttempt<T>(
   quizId: string,
   userId: string | null,
-  save: (client: PoolClient) => Promise<T>,
+  save: (client: PoolClient, assessment: boolean) => Promise<T>,
   recipientId?: string | null,
 ) {
   const client = await pool.connect();
@@ -33,8 +36,9 @@ export async function saveQuizAttempt<T>(
     // Serialize checks and writes across both submission routes, including concurrent requests.
     const quiz = await client.query("SELECT mode FROM quizzes WHERE id=$1 FOR UPDATE", [quizId]);
     if (!quiz.rowCount) throw new QuizAttemptError(404, "A kvíz nem érhető el.");
-    if (quiz.rows[0].mode === "assessment") await checkAssessment(client, quizId, userId, recipientId);
-    const result = await save(client);
+    const assessment = quiz.rows[0].mode === "assessment";
+    if (assessment) await checkAssessment(client, quizId, userId, recipientId);
+    const result = await save(client, assessment);
     await client.query("COMMIT");
     return result;
   } catch (error) {
@@ -42,5 +46,24 @@ export async function saveQuizAttempt<T>(
     throw error;
   } finally {
     client.release();
+  }
+}
+
+// Both assessment entry points use the complete server-defined question set.
+export async function getAssessmentQuestions(db: Pick<PoolClient, "query">, quizId: string) {
+  const { rows } = await db.query<{ id: string; prompt: string; options: string[]; correct_index: number }>(
+    "SELECT id, prompt, options, correct_index FROM questions WHERE quiz_id=$1 ORDER BY id", [quizId],
+  );
+  return rows;
+}
+
+export function validateAssessmentAnswers(
+  questions: Awaited<ReturnType<typeof getAssessmentQuestions>>,
+  answers: Record<string, number>,
+) {
+  const ids = Object.keys(answers);
+  const byId = new Map(questions.map((question) => [question.id, question]));
+  if (!ids.length || ids.some((id) => !byId.has(id) || answers[id] >= byId.get(id)!.options.length)) {
+    throw new QuizAttemptError(400, "A vizsgaválaszok között nincs érvényes kitöltés, vagy hibás kérdés szerepel.");
   }
 }

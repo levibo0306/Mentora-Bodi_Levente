@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { pool } from "../db";
 import { optionalAuth, requireAuth } from "../middleware/auth";
-import { checkAssessment, QuizAttemptError, saveQuizAttempt } from "../services/quizAttempts";
+import { checkAssessment, getAssessmentQuestions, QuizAttemptError, quizSubmission, saveQuizAttempt, validateAssessmentAnswers } from "../services/quizAttempts";
 import { updateDailyMissionsOnAttempt } from "../services/gamification";
 
 export const shareRouter = Router();
@@ -21,27 +21,34 @@ shareRouter.post("/quizzes/:id/share", requireAuth, async (req, res) => {
     })
     .optional();
 
-  const body = Body?.parse(req.body ?? {}) ?? {};
+  const parsed = Body.safeParse(req.body ?? {});
+  if (!parsed.success || !z.string().uuid().safeParse(id).success) return res.status(400).json({ error: "Érvénytelen megosztási adatok." });
+  const body = parsed.data ?? {};
 
-  const own = await pool.query("select 1 from quizzes where id=$1 and owner_id=$2", [id, userId]);
+  const quiz = await pool.query("select owner_id, mode from quizzes where id=$1", [id]);
+  if (!quiz.rowCount) return res.status(404).json({ error: "A kvíz nem érhető el." });
+  const isOwner = quiz.rows[0].owner_id === userId;
+  const assessment = quiz.rows[0].mode === "assessment";
+  if (assessment && !isOwner) return res.status(403).json({ error: "Vizsgát csak a tulajdonos oszthat meg." });
 
   let sourceShare: { allow_reshare: boolean; id: string } | null = null;
-  if (own.rowCount === 0) {
+  if (!isOwner) {
     if (!body.source_token) {
       return res.status(403).json({ error: "No permission to share this quiz" });
     }
     const s = await pool.query(
-      "select id, allow_reshare, quiz_id from quiz_shares where token=$1",
+      "select id, allow_reshare, quiz_id, recipient_id from quiz_shares where token=$1",
       [body.source_token]
     );
     if (s.rowCount === 0) return res.status(403).json({ error: "Invalid share token" });
     if (s.rows[0].quiz_id !== id) return res.status(403).json({ error: "Token mismatch" });
+    if (s.rows[0].recipient_id && s.rows[0].recipient_id !== userId) return res.status(403).json({ error: "Ez a link másik felhasználóhoz tartozik." });
     if (!s.rows[0].allow_reshare) return res.status(403).json({ error: "Reshare not allowed" });
     sourceShare = { id: s.rows[0].id, allow_reshare: s.rows[0].allow_reshare };
   }
 
   const allowReshare =
-    !!body.allow_reshare && ((own.rowCount ?? 0) > 0 || sourceShare?.allow_reshare);
+    !assessment && !!body.allow_reshare && (isOwner || sourceShare?.allow_reshare);
 
   const recipients = (body.recipients ?? []).map((e) => e.trim().toLowerCase()).filter(Boolean);
 
@@ -85,10 +92,14 @@ shareRouter.post("/share/claim", requireAuth, async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   const Body = z.object({ token: z.string().min(6) });
-  const { token } = Body.parse(req.body);
+  const parsed = Body.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Érvénytelen megosztási kód." });
+  const { token } = parsed.data;
 
   const s = await pool.query(
-    "select id, quiz_id, recipient_id, allow_reshare, shared_by, token from quiz_shares where token=$1",
+    `select s.id, s.quiz_id, s.recipient_id, s.allow_reshare, s.shared_by, s.token
+     from quiz_shares s join quizzes q on q.id=s.quiz_id
+     where s.token=$1 AND (q.mode IS DISTINCT FROM 'assessment' OR s.shared_by=q.owner_id)`,
     [token]
   );
   if (s.rowCount === 0) return res.status(404).json({ error: "Invalid code" });
@@ -113,12 +124,13 @@ shareRouter.post("/share/claim", requireAuth, async (req, res) => {
 
 // Student/public: get shared quiz by token
 shareRouter.get("/share/:token", optionalAuth, async (req, res, next) => {
-  const { token } = z.object({ token: z.string().min(8) }).parse(req.params);
+  const token = req.params.token;
+  if (token.length < 8) return res.status(404).json({ error: "Invalid link" });
 
   const q = await pool.query(
     `select q.id, q.title, q.description, q.mode, s.recipient_id
      from quiz_shares s join quizzes q on q.id = s.quiz_id
-     where s.token = $1`,
+     where s.token = $1 AND (q.mode IS DISTINCT FROM 'assessment' OR s.shared_by=q.owner_id)`,
     [token]
   );
   if (q.rowCount === 0) return res.status(404).json({ error: "Invalid link" });
@@ -145,14 +157,16 @@ shareRouter.get("/share/:token", optionalAuth, async (req, res, next) => {
 
 // Student/public: submit answers and get score
 shareRouter.post("/share/:token/submit", optionalAuth, async (req, res, next) => {
-  const { token } = z.object({ token: z.string().min(8) }).parse(req.params);
-  const Body = z.object({ answers: z.record(z.string(), z.number().int().min(0)) });
-  const { answers } = Body.parse(req.body);
+  const token = req.params.token;
+  if (token.length < 8) return res.status(404).json({ error: "Invalid link" });
+  const parsed = quizSubmission.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Érvénytelen kvízválaszok." });
+  const { answers } = parsed.data;
 
   const q = await pool.query(
     `select q.id, s.recipient_id
      from quiz_shares s join quizzes q on q.id = s.quiz_id
-     where s.token = $1`,
+     where s.token = $1 AND (q.mode IS DISTINCT FROM 'assessment' OR s.shared_by=q.owner_id)`,
     [token]
   );
   if (q.rowCount === 0) return res.status(404).json({ error: "Invalid link" });
@@ -161,16 +175,17 @@ shareRouter.post("/share/:token/submit", optionalAuth, async (req, res, next) =>
 
   const userId = req.user?.sub ?? null;
   try {
-    const { score, max, scorePercent } = await saveQuizAttempt(quizId, userId, async (client) => {
-      const correct = await client.query("select id, correct_index from questions where quiz_id=$1", [quizId]);
+    const { score, max, scorePercent } = await saveQuizAttempt(quizId, userId, async (client, assessment) => {
+      const questions = await getAssessmentQuestions(client, quizId);
+      if (assessment) validateAssessmentAnswers(questions, answers);
 
       let score = 0;
-      for (const row of correct.rows) {
+      for (const row of questions) {
         const given = answers[row.id];
         if (given === row.correct_index) score++;
       }
 
-      const max = correct.rowCount ?? 0;
+      const max = questions.length;
       const scorePercent = max > 0 ? Math.round((score / max) * 100) : 0;
 
       await client.query("insert into attempts(quiz_id, user_id, answers, score) values($1,$2,$3,$4)", [

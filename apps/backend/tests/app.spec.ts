@@ -27,6 +27,18 @@ describe("backend application", () => {
     expect(response.status).toBe(401);
   });
 
+  test("rejects an empty quiz request and keeps serving requests", async () => {
+    const { app } = await import("../src/index");
+    const token = signToken({
+      sub: "00000000-0000-4000-8000-000000000001",
+      email: "teacher@example.com",
+      role: "teacher",
+    });
+    await request(app).post("/api/quizzes").set("Authorization", `Bearer ${token}`).send({}).expect(400);
+    await request(app).get("/health").expect(200);
+    expect(query).not.toHaveBeenCalled();
+  });
+
   test("validates AI generation input before calling the model", async () => {
     const { app } = await import("../src/index");
     const token = signToken({

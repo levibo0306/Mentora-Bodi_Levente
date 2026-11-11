@@ -43,7 +43,7 @@ export async function extractDocumentText(
   let rawText: string;
   try {
     if (isPdf(fileName, mimeType)) {
-      const parsed = await pdfParse(buffer);
+      const parsed = await pdfParse(new Uint8Array(buffer));
       rawText = parsed.text;
     } else if (isDocx(fileName, mimeType)) {
       const parsed = await mammoth.extractRawText({ buffer });
