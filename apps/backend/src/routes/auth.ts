@@ -69,7 +69,7 @@ authRouter.post("/login", async (req, res) => {
 
 authRouter.get("/me", requireAuth, async (req, res) => {
   try {
-    const user = (req as any).user;
+    const user = req.user;
     
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -107,7 +107,7 @@ const UpdateProfileBody = z.object({
   new_password: z.string().min(6).max(72).optional(),
 });
 
-authRouter.patch("/me", requireAuth, async (req: any, res) => {
+authRouter.patch("/me", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -149,7 +149,8 @@ authRouter.patch("/me", requireAuth, async (req: any, res) => {
 
 authRouter.post("/logout", requireAuth, async (req, res) => {
   try {
-    const token = (req as any).token as string;
+    const token = req.token;
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
     revokeToken(token);
     return res.status(204).send();
   } catch (err: any) {

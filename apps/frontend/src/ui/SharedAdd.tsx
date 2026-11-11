@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { api } from "../api/http";
+import { api, getErrorMessage } from "../api/http";
 import { claimFlashcardPack } from "../api/flashcards";
 import { claimTopic } from "../api/topics";
 
@@ -59,9 +59,9 @@ export const SharedAdd = ({ onAdded }: Props) => {
       setMessage(`A ${type === "quiz" ? "kvíz" : type === "topic" ? "téma" : "Flashcards"} sikeresen hozzáadva.`);
       setValue("");
       onAdded(type === "quiz" ? "shared" : type === "topic" ? "topics" : "flashcards");
-    } catch (err: any) {
+    } catch (error: unknown) {
       setStatus("error");
-      setMessage(err?.message ?? "Nem sikerült hozzáadni.");
+      setMessage(getErrorMessage(error, "Nem sikerült hozzáadni."));
     }
   };
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <!DOCTYPE coverage SYSTEM "http://cobertura.sourceforge.net/xml/coverage-04.dtd">
-<coverage lines-valid="206" lines-covered="189" line-rate="0.9174" branches-valid="53" branches-covered="38" branch-rate="0.7169" timestamp="1789512144262" complexity="0" version="0.1">
+<coverage lines-valid="206" lines-covered="189" line-rate="0.9174" branches-valid="53" branches-covered="38" branch-rate="0.7169" timestamp="1792090620785" complexity="0" version="0.1">
   <sources>
     <source>/Users/bodilevente/mentora-prototype/apps/frontend</source>
   </sources>

@@ -1,6 +1,6 @@
 import "dotenv/config";
 import "./instrument";
-import express from "express";
+import express, { type ErrorRequestHandler } from "express";
 import cors from "cors";
 import * as Sentry from "@sentry/node";
 import { healthcheck } from "./db";
@@ -29,7 +29,7 @@ app.use(
   })
 );
 app.use(express.json());
-const metrics = { requests: 0, errors: 0, quizzesCreated: 0 };
+const metrics = { requests: 0, errors: 0 };
 
 app.use((req, _res, next) => {
   metrics.requests++;
@@ -49,10 +49,11 @@ app.get("/health", async (_req, res) => {
   try {
     await healthcheck();
     res.json({ ok: true });
-  } catch (e: any) {
+  } catch (error) {
     metrics.errors++;
-    Sentry.captureException(e);
-    res.status(500).json({ ok: false, error: e?.message ?? "health failed" });
+    Sentry.captureException(error);
+    const message = error instanceof Error ? error.message : "health failed";
+    res.status(500).json({ ok: false, error: message });
   }
 });
 
@@ -68,11 +69,13 @@ app.use("/api/topics", topicsRouter);
 app.use("/api/feedback", feedbackRouter);
 
 // Error handler
-app.use((err: any, _req: any, res: any, _next: any) => {
+const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   metrics.errors++;
-  Sentry.captureException(err);
-  res.status(500).json({ error: err?.message ?? "server error" });
-});
+  Sentry.captureException(error);
+  const message = error instanceof Error ? error.message : "server error";
+  res.status(500).json({ error: message });
+};
+app.use(errorHandler);
 
 if (process.env.NODE_ENV !== "test") {
   const port = Number(process.env.PORT ?? 3001);

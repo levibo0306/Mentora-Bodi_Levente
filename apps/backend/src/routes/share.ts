@@ -8,7 +8,7 @@ import { updateDailyMissionsOnAttempt } from "../services/gamification";
 export const shareRouter = Router();
 
 // Create share link(s) for a quiz (teacher or student with reshare permission)
-shareRouter.post("/quizzes/:id/share", requireAuth, async (req: any, res) => {
+shareRouter.post("/quizzes/:id/share", requireAuth, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.sub;
 
@@ -79,7 +79,7 @@ shareRouter.post("/quizzes/:id/share", requireAuth, async (req: any, res) => {
 });
 
 // Claim a shared quiz by code/link
-shareRouter.post("/share/claim", requireAuth, async (req: any, res) => {
+shareRouter.post("/share/claim", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -111,7 +111,7 @@ shareRouter.post("/share/claim", requireAuth, async (req: any, res) => {
 });
 
 // Student/public: get shared quiz by token
-shareRouter.get("/share/:token", optionalAuth, async (req: any, res) => {
+shareRouter.get("/share/:token", optionalAuth, async (req, res) => {
   const { token } = z.object({ token: z.string().min(8) }).parse(req.params);
 
   const q = await pool.query(
@@ -135,7 +135,7 @@ shareRouter.get("/share/:token", optionalAuth, async (req: any, res) => {
 });
 
 // Student/public: submit answers and get score
-shareRouter.post("/share/:token/submit", optionalAuth, async (req: any, res) => {
+shareRouter.post("/share/:token/submit", optionalAuth, async (req, res) => {
   const { token } = z.object({ token: z.string().min(8) }).parse(req.params);
   const Body = z.object({ answers: z.record(z.string(), z.number().int().min(0)) });
   const { answers } = Body.parse(req.body);

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { getUserMissions, getWeeklyGoal, WeeklyGoal } from "../api/users";
+import { getUserMissions, getWeeklyGoal, type UserOverview, type WeeklyGoal } from "../api/users";
 import { PageLayout } from "../ui/PageLayout";
 
-type Mission = NonNullable<ReturnType<typeof getUserMissions> extends Promise<infer U> ? U : any>[number];
+type Mission = NonNullable<UserOverview["daily_missions"]>[number];
 
 export const Missions = () => {
   const [missions, setMissions] = useState<Mission[]>([]);

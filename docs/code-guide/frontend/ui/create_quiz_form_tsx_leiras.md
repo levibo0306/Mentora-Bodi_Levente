@@ -4,6 +4,8 @@
 
 A kvíz létrehozásának és szerkesztésének háromlépéses wizardja.
 
+A nagy űrlap olvashatósága érdekében az alapadatok a `quiz-form/QuizBasicsStep.tsx`, a kézi kérdésmezők a `quiz-form/QuestionEditor.tsx`, az összegzés pedig a `quiz-form/QuizReviewStep.tsx` komponensben található. A fő fájl az állapotot és a mentési folyamatot tartja egyben.
+
 ## Állapot és lépések
 
 1. Alapadatok: cím, leírás, gyakorlás/vizsga mód és téma.

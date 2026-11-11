@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="sprint2-tests" tests="5" failures="0" errors="0" time="0.366">
-    <testsuite name="tests/unit/offline_flashcards.spec.ts" timestamp="2026-09-16T20:46:31.967Z" hostname="192.168.1.66" tests="2" failures="0" errors="0" skipped="0" time="0.006">
-        <testcase classname="tests/unit/offline_flashcards.spec.ts" name="offline Flashcards &gt; stores a pack and updates its local repetition schedule" time="0.003">
+<testsuites name="sprint2-tests" tests="5" failures="0" errors="0" time="0.229">
+    <testsuite name="tests/unit/offline_flashcards.spec.ts" timestamp="2026-10-15T18:57:00.729Z" hostname="192.168.1.72" tests="2" failures="0" errors="0" skipped="0" time="0.003">
+        <testcase classname="tests/unit/offline_flashcards.spec.ts" name="offline Flashcards &gt; stores a pack and updates its local repetition schedule" time="0.001">
         </testcase>
-        <testcase classname="tests/unit/offline_flashcards.spec.ts" name="offline Flashcards &gt; sends queued reviews when the connection returns" time="0.002">
+        <testcase classname="tests/unit/offline_flashcards.spec.ts" name="offline Flashcards &gt; sends queued reviews when the connection returns" time="0.001">
         </testcase>
     </testsuite>
-    <testsuite name="tests/unit/offline_quizzes.spec.ts" timestamp="2026-09-16T20:46:31.968Z" hostname="192.168.1.66" tests="3" failures="0" errors="0" skipped="0" time="0.006">
-        <testcase classname="tests/unit/offline_quizzes.spec.ts" name="offline quizzes &gt; stores, replaces and removes a downloaded quiz" time="0.004">
+    <testsuite name="tests/unit/offline_quizzes.spec.ts" timestamp="2026-10-15T18:57:00.730Z" hostname="192.168.1.72" tests="3" failures="0" errors="0" skipped="0" time="0.005">
+        <testcase classname="tests/unit/offline_quizzes.spec.ts" name="offline quizzes &gt; stores, replaces and removes a downloaded quiz" time="0.001">
         </testcase>
         <testcase classname="tests/unit/offline_quizzes.spec.ts" name="offline quizzes &gt; syncs queued attempts and keeps failed items for a later retry" time="0.002">
         </testcase>
-        <testcase classname="tests/unit/offline_quizzes.spec.ts" name="offline quizzes &gt; does not submit queued attempts while offline" time="0">
+        <testcase classname="tests/unit/offline_quizzes.spec.ts" name="offline quizzes &gt; does not submit queued attempts while offline" time="0.001">
         </testcase>
     </testsuite>
 </testsuites>

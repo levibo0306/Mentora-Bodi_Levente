@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { claimFlashcardPack, createFlashcardPack, deleteFlashcardPack, Flashcard, FlashcardPack, getFlashcardPack, getFlashcardPacks, getFlashcardPackStats, importQuizAsPack, NewCard, reviewFlashcard } from "../api/flashcards";
+import { claimFlashcardPack, createFlashcardPack, deleteFlashcardPack, type Flashcard, type FlashcardPack, type FlashcardPackStats, getFlashcardPack, getFlashcardPacks, getFlashcardPackStats, importQuizAsPack, type NewCard, reviewFlashcard } from "../api/flashcards";
 import { getTopics, Topic } from "../api/topics";
 import { getImportableQuizzes, Quiz } from "../api/quizzes";
 import { useAuth } from "../context/AuthContext";
 import { trackActivity } from "../api/users";
+import { getErrorMessage } from "../api/http";
 import { FlashcardShareModal } from "./FlashcardShareModal";
 import {
   applyOfflineFlashcardReview,
@@ -31,7 +32,7 @@ export const Flashcards = ({ topicId: fixedTopicId = null }: Props) => {
   const [queue, setQueue] = useState<Flashcard[]>([]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const [stats, setStats] = useState<any[] | null>(null);
+  const [stats, setStats] = useState<FlashcardPackStats[] | null>(null);
   const [statsPackId, setStatsPackId] = useState<string | null>(null);
   const [importQuizId, setImportQuizId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -88,7 +89,7 @@ export const Flashcards = ({ topicId: fixedTopicId = null }: Props) => {
     try {
       await claimFlashcardPack(claimCode.trim());
       setClaimCode(""); setStatus("A Flashcards csomag megjelent a könyvtáradban."); await loadPacks();
-    } catch (error: any) { setStatus(error?.message ?? "Nem sikerült hozzáadni a Flashcards csomagot."); }
+    } catch (error: unknown) { setStatus(getErrorMessage(error, "Nem sikerült hozzáadni a Flashcards csomagot.")); }
     finally { setBusy(false); }
   };
 
@@ -130,8 +131,8 @@ export const Flashcards = ({ topicId: fixedTopicId = null }: Props) => {
         setOfflinePackIds((current) => new Set(current).add(pack.id));
         setStatus(`A(z) „${pack.title}” internet nélkül is gyakorolható.`);
       }
-    } catch (error: any) {
-      setStatus(error?.message ?? "Nem sikerült letölteni a Flashcards csomagot.");
+    } catch (error: unknown) {
+      setStatus(getErrorMessage(error, "Nem sikerült letölteni a Flashcards csomagot."));
     } finally {
       setOfflineBusyId("");
     }

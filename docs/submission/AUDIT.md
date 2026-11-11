@@ -1,4 +1,4 @@
-# Teljes projekt-audit – 2026-09-16
+# Teljes projekt-audit – frissítve 2026-10-15
 
 ## Átvizsgált területek
 
@@ -21,14 +21,20 @@ A `node_modules`, `.git`, build-, coverage- és Terraform provider-cache könyvt
 - A korábbi, holt segédkódot vizsgáló teszteket offline kvízszinkron- és JWT-tesztekkel váltottuk fel.
 - A coverage a ténylegesen használt offline modulokat méri.
 - A tesztriport, traceability és backend környezeti dokumentáció aktualizálva lett.
+- A React belépési pont szabványos `main.tsx → App.tsx → pages/ui` szerkezetet kapott.
+- A dashboard, útvonalvédelem és kvízűrlap részei külön, egyfeladatú komponensekre váltak szét.
+- A publikus kvíz inline stílusai CSS-osztályokba kerültek; a komponens lényegesen rövidebb lett.
+- Az AI route-ok külön routerbe kerültek, a frontend és az Express kérésobjektum pedig szigorúbb típust kapott.
+- Kikerült a soha nem használt, a részletes eredmény API-t megkettőző kvíz-statisztika végpont.
+- Elkészült a teljes, kezdőknek szánt React-, folyamat- és függvénykézikönyv.
 
 ## Ellenőrzött eredmény
 
 - TypeScript typecheck: sikeres
-- Backend: 15/15 teszt sikeres
+- Backend: 16/16 teszt sikeres
 - Frontend: 5/5 unit teszt sikeres
 - Frontend coverage: 91,74% sor, 71,69% ág
-- Playwright: 2/2 E2E folyamat sikeres
+- Playwright: 3/3 E2E folyamat sikeres
 - Production build: sikeres
 - `npm audit --omit=dev`: 0 sérülékenység
 - `git diff --check`: sikeres
@@ -46,8 +52,7 @@ A `node_modules`, `.git`, build-, coverage- és Terraform provider-cache könyvt
 1. A logout token-visszavonás csak memóriában él, szerverújraindítás után elveszik; a frontend jelenleg lokálisan léptet ki.
 2. Nincs rate limiting a login-, AI-generáló és publikus megosztási végpontokon.
 3. A UI legfontosabb komponenseihez még nincs komponensszintű teszt; az alapfolyamatokat jelenleg E2E tesztek védik.
-4. Az API route-okban sok `any` típus található. Express Request típus-kiegészítéssel és DTO-kkal fokozatosan szigorítható.
-5. A `/metrics` `quizzesCreated` mezője nincs bekötve a kvízlétrehozásba, ezért mindig nulla.
+4. Egyes hibakezelő `catch` ágak és régebbi frontend state-ek még használnak `any` típust. Az Express Request és a központi API kliens típusa már szigorítva lett; a maradék fokozatosan cserélhető `unknown` és konkrét DTO típusokra.
 
 ### Függőségek
 

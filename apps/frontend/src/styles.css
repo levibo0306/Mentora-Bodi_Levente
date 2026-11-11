@@ -2325,3 +2325,90 @@ button:active, .btn:active {
     padding-inline: 10px;
   }
 }
+/* Teljes képernyős, középre igazított egyszerű állapot (például route betöltés). */
+.full-page-message {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 18px;
+}
+
+/* Publikus kvíz. A külön osztályok miatt a JSX-ben csak a tartalom marad. */
+.shared-quiz-page {
+  min-height: 100vh;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.shared-quiz-centered {
+  min-height: calc(100vh - 40px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shared-quiz-centered .result-card { text-align: center; }
+.shared-quiz-loading-icon { margin-bottom: 20px; font-size: 48px; }
+.shared-quiz-result-icon { margin-bottom: 20px; font-size: 64px; }
+.shared-quiz-error-title { margin-bottom: 16px; color: var(--danger); font-size: 28px; }
+.shared-quiz-result-title { margin-bottom: 20px; color: var(--dark); font-size: 32px; }
+
+.shared-quiz-score {
+  margin: 20px 0;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  font-size: 72px;
+  font-weight: 700;
+}
+
+.shared-quiz-score.passed { background-image: linear-gradient(135deg, var(--success), #00d4aa); }
+.shared-quiz-score.retry { background-image: linear-gradient(135deg, var(--danger), #ff8fa3); }
+.shared-quiz-score-detail { margin-bottom: 30px; color: #666; font-size: 20px; }
+.shared-quiz-result-message { margin-bottom: 30px; padding: 20px; border-radius: 16px; background: var(--light); color: #666; font-size: 14px; }
+
+.shared-quiz-result-actions,
+.shared-quiz-navigation { display: flex; justify-content: center; gap: 12px; }
+
+.shared-quiz-header,
+.shared-quiz-question-card {
+  max-width: 900px;
+  margin-right: auto;
+  margin-left: auto;
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.shared-quiz-header { margin-bottom: 30px; padding: 30px; }
+.shared-quiz-heading-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.shared-quiz-heading-row h1 { margin: 0 0 8px; color: var(--dark); font-size: 28px; }
+.shared-quiz-heading-row p { margin: 0; color: #666; font-size: 15px; }
+
+.shared-quiz-counter {
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), #ff8c61);
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.shared-quiz-progress { height: 8px; overflow: hidden; border-radius: 4px; background: #e0e0e0; }
+.shared-quiz-progress div { height: 100%; border-radius: 4px; background: linear-gradient(135deg, var(--primary), #ff8c61); transition: width 0.3s ease; }
+
+.shared-quiz-question-card { padding: 50px; border-radius: 24px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15); }
+.shared-quiz-question-card h2 { margin-bottom: 40px; color: var(--dark); font-size: 26px; line-height: 1.5; }
+.shared-quiz-question-card .option-card { width: 100%; text-align: left; font: inherit; cursor: pointer; }
+.shared-quiz-navigation { justify-content: space-between; margin-top: 40px; gap: 16px; }
+.shared-quiz-navigation .btn { min-width: 140px; padding: 14px 28px; font-size: 15px; }
+.shared-quiz-footer { max-width: 900px; margin: 30px auto 0; color: white; text-align: center; font-size: 14px; opacity: 0.8; }
+
+@media (max-width: 640px) {
+  .shared-quiz-heading-row { align-items: flex-start; gap: 16px; }
+  .shared-quiz-counter { padding: 10px 14px; white-space: nowrap; }
+  .shared-quiz-question-card { padding: 28px 20px; }
+}

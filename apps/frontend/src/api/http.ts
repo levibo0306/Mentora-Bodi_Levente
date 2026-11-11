@@ -8,10 +8,14 @@ export class ApiError extends Error {
   }
 }
 
+export function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 const wait = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const notifyError = (message: string) => window.dispatchEvent(new CustomEvent("mentora:error", { detail: message }));
 
-export async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
+export async function api<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
   const method = (init.method ?? "GET").toUpperCase();
   const maxAttempts = method === "GET" ? 3 : 1;
   let lastError: ApiError | null = null;

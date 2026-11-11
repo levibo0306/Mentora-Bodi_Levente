@@ -4,6 +4,7 @@ import { getQuiz, getQuizQuestions, getQuizzes, Quiz, deleteQuiz } from "../api/
 import { getTopics, Topic } from "../api/topics";
 import { ShareModal } from "./ShareModal";
 import { listOfflineQuizzes, removeOfflineQuiz, saveOfflineQuiz } from "../infra/offlineQuizzes";
+import { getErrorMessage } from "../api/http";
 
 interface Props {
   onEdit: (id: string) => void;
@@ -109,8 +110,8 @@ export const QuizList = ({ onEdit, topicId: fixedTopicId = null, hideFilter = fa
         setOfflineIds((ids) => new Set(ids).add(quiz.id));
         setOfflineStatus(`A(z) „${quiz.title}” internet nélkül is kitölthető.`);
       }
-    } catch (error: any) {
-      setOfflineStatus(error?.message ?? "Nem sikerült letölteni a kvízt.");
+    } catch (error: unknown) {
+      setOfflineStatus(getErrorMessage(error, "Nem sikerült letölteni a kvízt."));
     } finally {
       setOfflineBusyId("");
     }
@@ -141,7 +142,7 @@ export const QuizList = ({ onEdit, topicId: fixedTopicId = null, hideFilter = fa
         </div>
       ) : <div className="quiz-grid">
         {quizzes.map((quiz) => {
-          const diff = getDifficultyStyle((quiz as any).avg_difficulty);
+          const diff = getDifficultyStyle(quiz.avg_difficulty);
 
           return (
             <div key={quiz.id} className="quiz-card">

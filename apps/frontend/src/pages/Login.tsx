@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import type { UserRole } from "../api/auth";
+import { getErrorMessage } from "../api/http";
 
 export const Login: React.FC = () => {
   const nav = useNavigate();
@@ -22,8 +23,8 @@ export const Login: React.FC = () => {
       if (mode === "login") await login(identifier, password);
       else await register(username, email, password, role);
       nav("/");
-    } catch (e: any) {
-      setErr(e?.message ?? "Hiba történt");
+    } catch (error: unknown) {
+      setErr(getErrorMessage(error, "Hiba történt"));
     }
   };
 

@@ -30,8 +30,8 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 
   try {
     const payload = JwtPayloadSchema.parse(jwt.verify(token, jwtSecret()));
-    (req as any).user = payload; 
-    (req as any).token = token;
+    req.user = payload;
+    req.token = token;
     next();
   } catch {
     return res.status(401).json({ error: "Unauthorized" });
@@ -47,8 +47,8 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
 
   try {
     const payload = JwtPayloadSchema.parse(jwt.verify(token, jwtSecret()));
-    (req as any).user = payload;
-    (req as any).token = token;
+    req.user = payload;
+    req.token = token;
   } catch {
     // ignore invalid token for optional auth
   }
@@ -57,9 +57,8 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
 
 export function requireRole(role: "teacher" | "student") {
   return (req: Request, res: Response, next: NextFunction) => {
-    const user = (req as any).user as JwtPayload | undefined;
-    if (!user) return res.status(401).json({ error: "Unauthorized" });
-    if (user.role !== role) return res.status(403).json({ error: "Forbidden" });
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+    if (req.user.role !== role) return res.status(403).json({ error: "Forbidden" });
     next();
   };
 }

@@ -37,9 +37,9 @@ DATABASE_URL=postgres://USER:PASSWORD@localhost:5432/mentora
 PORT=3001
 ```
 
-### Helyi AI kérdésgenerálás
+### AI kérdésgenerálás
 
-Az AI funkció nem használ fizetős API-t: a backend a helyben futó Ollamát hívja.
+A backend helyi Ollamát vagy API-kulccsal távoli Ollama szolgáltatást is tud hívni. A helyi futtatásnak nincs kérésenkénti díja; a felhős szolgáltatás saját keretekkel és árazással működik.
 
 1. Töltsd le és telepítsd az Ollama macOS alkalmazást: https://ollama.com/download/mac
 2. Nyisd meg az Ollama alkalmazást.
@@ -144,3 +144,4 @@ npm run test:frontend:ci
 A részletes dokumentumok a `docs/` mappában vannak (PRD/ADR, Sprint 1-2 anyagok, prototype).
 A végső beadás lépései: [`docs/submission/CHECKLIST.md`](docs/submission/CHECKLIST.md).
 A teljes technikai audit és a nyitott javaslatok: [`docs/submission/AUDIT.md`](docs/submission/AUDIT.md).
+A teljes, kezdőknek szánt működési és React-kézikönyv: [`docs/MENTORA_KEZIKONYV.md`](docs/MENTORA_KEZIKONYV.md).

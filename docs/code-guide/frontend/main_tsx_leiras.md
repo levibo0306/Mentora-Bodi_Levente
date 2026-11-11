@@ -14,4 +14,6 @@ Ez a frontend tényleges belépési pontja. A böngészőben lévő `#root` HTML
 
 ## Kapcsolatok
 
-Az `index.html` tölti be ezt a fájlt. Innen a vezérlés az `index.tsx` fájl `App` komponenséhez kerül. Ha a router vagy az auth provider innen hiányozna, az olyan hookok, mint a `useNavigate`, `useLocation` vagy `useAuth` nem működnének.
+Az `index.html` tölti be ezt a fájlt. Innen a vezérlés az `App.tsx` gyökérkomponenséhez kerül. Ha a router vagy az auth provider innen hiányozna, az olyan hookok, mint a `useNavigate`, `useLocation` vagy `useAuth` nem működnének.
+
+A fájl regisztrálja a service workert, és a `syncOfflineWork` segítségével induláskor, valamint az internet visszatérésekor szinkronizálja a függő kvízkitöltéseket és kártyaértékeléseket.

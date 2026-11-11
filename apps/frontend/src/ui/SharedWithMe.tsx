@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../api/http";
+import { api, getErrorMessage } from "../api/http";
 import { ShareModal } from "./ShareModal";
 import { getQuiz, getQuizQuestions, type Quiz } from "../api/quizzes";
 import { listOfflineQuizzes, removeOfflineQuiz, saveOfflineQuiz } from "../infra/offlineQuizzes";
@@ -64,8 +64,8 @@ export const SharedWithMe = () => {
         setOfflineIds((current) => new Set(current).add(quiz.id));
         setOfflineStatus(`A(z) „${quiz.title}” internet nélkül is kitölthető.`);
       }
-    } catch (error: any) {
-      setOfflineStatus(error?.message ?? "Nem sikerült letölteni a kvízt.");
+    } catch (error: unknown) {
+      setOfflineStatus(getErrorMessage(error, "Nem sikerült letölteni a kvízt."));
     } finally {
       setOfflineBusyId("");
     }

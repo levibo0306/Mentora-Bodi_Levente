@@ -27,7 +27,7 @@ async function canReadPack(packId: string, userId: string) {
   return pack && (pack.is_owner || pack.is_shared) ? pack : null;
 }
 
-flashcardsRouter.get("/packs", requireAuth, async (req: any, res) => {
+flashcardsRouter.get("/packs", requireAuth, async (req, res) => {
   const userId = req.user.sub;
   const topicId = typeof req.query.topic_id === "string" ? uuid.parse(req.query.topic_id) : null;
   try {
@@ -54,7 +54,7 @@ flashcardsRouter.get("/packs", requireAuth, async (req: any, res) => {
   }
 });
 
-flashcardsRouter.get("/packs/:id", requireAuth, async (req: any, res) => {
+flashcardsRouter.get("/packs/:id", requireAuth, async (req, res) => {
   const userId = req.user.sub;
   const id = uuid.parse(req.params.id);
   try {
@@ -76,7 +76,7 @@ flashcardsRouter.get("/packs/:id", requireAuth, async (req: any, res) => {
   }
 });
 
-flashcardsRouter.post("/packs", requireAuth, async (req: any, res) => {
+flashcardsRouter.post("/packs", requireAuth, async (req, res) => {
   const userId = req.user.sub;
   const body = PackSchema.parse(req.body);
   const client = await pool.connect();
@@ -103,7 +103,7 @@ flashcardsRouter.post("/packs", requireAuth, async (req: any, res) => {
   } finally { client.release(); }
 });
 
-flashcardsRouter.post("/packs/import-quiz", requireAuth, async (req: any, res) => {
+flashcardsRouter.post("/packs/import-quiz", requireAuth, async (req, res) => {
   const userId = req.user.sub;
   const { quiz_id, title } = z.object({ quiz_id: uuid, title: z.string().trim().min(2).max(120).optional() }).parse(req.body);
   const client = await pool.connect();
@@ -143,7 +143,7 @@ flashcardsRouter.post("/packs/import-quiz", requireAuth, async (req: any, res) =
   } finally { client.release(); }
 });
 
-flashcardsRouter.post("/packs/:id/review", requireAuth, async (req: any, res) => {
+flashcardsRouter.post("/packs/:id/review", requireAuth, async (req, res) => {
   const userId = req.user.sub;
   const packId = uuid.parse(req.params.id);
   const { card_id, quality } = z.object({ card_id: uuid, quality: z.number().int().min(0).max(5) }).parse(req.body);
@@ -172,7 +172,7 @@ flashcardsRouter.post("/packs/:id/review", requireAuth, async (req: any, res) =>
   }
 });
 
-flashcardsRouter.get("/packs/:id/stats", requireAuth, async (req: any, res) => {
+flashcardsRouter.get("/packs/:id/stats", requireAuth, async (req, res) => {
   const id = uuid.parse(req.params.id);
   try {
     const owner = await pool.query("SELECT 1 FROM flashcard_packs WHERE id=$1 AND owner_id=$2", [id, req.user.sub]);
@@ -192,7 +192,7 @@ flashcardsRouter.get("/packs/:id/stats", requireAuth, async (req: any, res) => {
   }
 });
 
-flashcardsRouter.post("/packs/:id/share", requireAuth, async (req: any, res) => {
+flashcardsRouter.post("/packs/:id/share", requireAuth, async (req, res) => {
   const id = uuid.parse(req.params.id);
   const body = z.object({ recipients: z.array(z.string().email()).optional() }).parse(req.body ?? {});
   const owner = await pool.query("SELECT 1 FROM flashcard_packs WHERE id=$1 AND owner_id=$2", [id, req.user.sub]);
@@ -220,7 +220,7 @@ flashcardsRouter.post("/packs/:id/share", requireAuth, async (req: any, res) => 
   res.json({ tokens });
 });
 
-flashcardsRouter.post("/share/claim", requireAuth, async (req: any, res) => {
+flashcardsRouter.post("/share/claim", requireAuth, async (req, res) => {
   const { token } = z.object({ token: z.string().trim().min(6) }).parse(req.body);
   const share = (await pool.query("SELECT * FROM flashcard_shares WHERE token=$1", [token])).rows[0];
   if (!share) return res.status(404).json({ error: "Érvénytelen Flashcards-kód." });
@@ -234,7 +234,7 @@ flashcardsRouter.post("/share/claim", requireAuth, async (req: any, res) => {
   res.json({ token: claimedToken });
 });
 
-flashcardsRouter.delete("/packs/:id", requireAuth, async (req: any, res) => {
+flashcardsRouter.delete("/packs/:id", requireAuth, async (req, res) => {
   const result = await pool.query("DELETE FROM flashcard_packs WHERE id=$1 AND owner_id=$2", [uuid.parse(req.params.id), req.user.sub]);
   if (!result.rowCount) return res.status(404).json({ error: "A Flashcards csomag nem található." });
   res.json({ ok: true });

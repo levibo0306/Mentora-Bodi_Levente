@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { api } from '../api/http';
+import { api, getErrorMessage } from '../api/http';
 
 interface ShareModalProps {
   quizId: string;
@@ -50,8 +50,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({
         recipient_email: t.recipient_email
       }));
       setShareLinks(links);
-    } catch (err: any) {
-      setError(err.message || 'Nem sikerült létrehozni a megosztási linket');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Nem sikerült létrehozni a megosztási linket'));
     } finally {
       setLoading(false);
     }

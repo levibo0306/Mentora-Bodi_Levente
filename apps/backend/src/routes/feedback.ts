@@ -2,12 +2,13 @@ import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db";
 import { requireAuth } from "../middleware/auth";
+import type { JwtPayload } from "../middleware/auth";
 import { recordLearningEvent } from "../services/gamification";
 
 export const feedbackRouter = Router();
 const uuid = z.string().uuid();
 
-async function resolvePair(user: any, partnerId: string) {
+async function resolvePair(user: JwtPayload, partnerId: string) {
   const partner = await pool.query("SELECT id,username,email,role FROM users WHERE id=$1", [partnerId]);
   if (!partner.rowCount || partner.rows[0].role === user.role) return null;
   const pair = user.role === "teacher"
@@ -50,7 +51,7 @@ async function getFeedbackTargets(pair: { teacherId: string; studentId: string }
   )).rows as Array<{ type: "topic" | "quiz" | "flashcards"; id: string; title: string }>;
 }
 
-feedbackRouter.get("/contacts", requireAuth, async (req: any, res) => {
+feedbackRouter.get("/contacts", requireAuth, async (req, res) => {
   const userId = req.user.sub;
   const role = req.user.role;
   try {
@@ -79,7 +80,7 @@ feedbackRouter.get("/contacts", requireAuth, async (req: any, res) => {
   }
 });
 
-feedbackRouter.get("/:partnerId", requireAuth, async (req: any, res) => {
+feedbackRouter.get("/:partnerId", requireAuth, async (req, res) => {
   const partnerId = uuid.parse(req.params.partnerId);
   const pair = await resolvePair(req.user, partnerId);
   if (!pair) return res.status(403).json({ error: "Érvénytelen kapcsolat." });
@@ -107,7 +108,7 @@ feedbackRouter.get("/:partnerId", requireAuth, async (req: any, res) => {
   }
 });
 
-feedbackRouter.get("/:partnerId/targets", requireAuth, async (req: any, res) => {
+feedbackRouter.get("/:partnerId/targets", requireAuth, async (req, res) => {
   const partnerId = uuid.parse(req.params.partnerId);
   const pair = await resolvePair(req.user, partnerId);
   if (!pair) return res.status(403).json({ error: "Érvénytelen kapcsolat." });
@@ -119,7 +120,7 @@ feedbackRouter.get("/:partnerId/targets", requireAuth, async (req: any, res) => 
   }
 });
 
-feedbackRouter.post("/:partnerId", requireAuth, async (req: any, res) => {
+feedbackRouter.post("/:partnerId", requireAuth, async (req, res) => {
   const partnerId = uuid.parse(req.params.partnerId);
   const body = z.object({
     message: z.string().trim().min(1).max(2000),

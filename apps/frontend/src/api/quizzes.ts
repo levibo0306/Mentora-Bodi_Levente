@@ -87,11 +87,11 @@ export async function getQuiz(id: string) {
 }
 
 export async function getQuizQuestions(id: string) {
-  const questions = await api<QuizQuestion[]>(`/api/quizzes/${id}/questions`);
+  const questions = await api<Array<Omit<QuizQuestion, "options"> & { options: string[] | string }>>(`/api/quizzes/${id}/questions`);
   return questions.map((question) => ({
     ...question,
     options: typeof question.options === "string" ? JSON.parse(question.options) : question.options,
-  }));
+  })) as QuizQuestion[];
 }
 
 export async function getAdaptiveQuizQuestions(id: string, limit = 10) {
@@ -123,14 +123,14 @@ export async function deleteQuiz(id: string) {
 }
 
 export async function createQuestion(quizId: string, data: CreateQuestionDto) {
-  return api<any>(`/api/quizzes/${quizId}/questions`, {
+  return api<QuizQuestion>(`/api/quizzes/${quizId}/questions`, {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
 export async function updateQuestion(quizId: string, questionId: string, data: CreateQuestionDto) {
-  return api<any>(`/api/quizzes/${quizId}/questions/${questionId}`, {
+  return api<QuizQuestion>(`/api/quizzes/${quizId}/questions/${questionId}`, {
     method: "PUT",
     body: JSON.stringify(data),
   });

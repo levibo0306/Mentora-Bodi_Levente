@@ -17,4 +17,4 @@ Nyitáskor Escape billentyűfigyelőt telepít és letiltja a body görgetését
 
 ## Kapcsolatok
 
-Az `index.tsx` a `CreateQuizForm` köré teszi. A megjelenést a `.modal-overlay`, `.modal-content` és kapcsolódó CSS szabályok adják.
+A `pages/Dashboard.tsx` a `CreateQuizForm` köré teszi. A megjelenést a `.modal-overlay`, `.modal-content` és kapcsolódó CSS szabályok adják.

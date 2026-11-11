@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { shareTopic } from "../api/topics";
+import { getErrorMessage } from "../api/http";
 
 type Props = {
   topicId: string;
@@ -25,8 +26,8 @@ export const TopicShareModal: React.FC<Props> = ({ topicId, topicName, isOpen, o
         .filter(Boolean);
       const res = await shareTopic(topicId, recipients.length ? recipients : undefined, allowReshare);
       setLinks(res.tokens.map((t) => ({ token: t.token })));
-    } catch (e: any) {
-      setError(e?.message ?? "Nem sikerült a megosztás");
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, "Nem sikerült a megosztás"));
     } finally {
       setLoading(false);
     }

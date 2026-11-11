@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { shareFlashcardPack } from "../api/flashcards";
+import { getErrorMessage } from "../api/http";
 
 type Props = { packId: string; title: string; onClose: () => void };
 
@@ -16,8 +17,8 @@ export function FlashcardShareModal({ packId, title, onClose }: Props) {
       const recipients = recipientsText.split(/[,;\n]/).map((value) => value.trim()).filter(Boolean);
       const result = await shareFlashcardPack(packId, recipients);
       setLinks(result.tokens);
-    } catch (reason: any) {
-      setError(reason?.message ?? "Nem sikerült megosztani a Flashcards csomagot.");
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, "Nem sikerült megosztani a Flashcards csomagot."));
     } finally {
       setLoading(false);
     }

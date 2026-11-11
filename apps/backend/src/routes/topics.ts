@@ -15,7 +15,7 @@ const TopicSchema = z.object({
   color: z.string().max(32).optional(),
 });
 
-topicsRouter.get("/", requireAuth, async (req: any, res) => {
+topicsRouter.get("/", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -36,7 +36,7 @@ topicsRouter.get("/", requireAuth, async (req: any, res) => {
   }
 });
 
-topicsRouter.get("/:id", requireAuth, async (req: any, res) => {
+topicsRouter.get("/:id", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
@@ -60,7 +60,7 @@ topicsRouter.get("/:id", requireAuth, async (req: any, res) => {
   }
 });
 
-topicsRouter.get("/:id/stats", requireAuth, requireRole("teacher"), async (req: any, res) => {
+topicsRouter.get("/:id/stats", requireAuth, requireRole("teacher"), async (req, res) => {
   const userId = req.user.sub;
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
   try {
@@ -86,7 +86,7 @@ topicsRouter.get("/:id/stats", requireAuth, requireRole("teacher"), async (req: 
   }
 });
 
-topicsRouter.post("/", requireAuth, async (req: any, res) => {
+topicsRouter.post("/", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -112,7 +112,7 @@ topicsRouter.post("/", requireAuth, async (req: any, res) => {
   }
 });
 
-topicsRouter.put("/:id", requireAuth, async (req: any, res) => {
+topicsRouter.put("/:id", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -146,7 +146,7 @@ topicsRouter.put("/:id", requireAuth, async (req: any, res) => {
   }
 });
 
-topicsRouter.delete("/:id", requireAuth, async (req: any, res) => {
+topicsRouter.delete("/:id", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -162,7 +162,7 @@ topicsRouter.delete("/:id", requireAuth, async (req: any, res) => {
 });
 
 // Share topic
-topicsRouter.post("/:id/share", requireAuth, async (req: any, res) => {
+topicsRouter.post("/:id/share", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
@@ -213,7 +213,7 @@ topicsRouter.post("/:id/share", requireAuth, async (req: any, res) => {
 });
 
 // Claim shared topic
-topicsRouter.post("/share/claim", requireAuth, async (req: any, res) => {
+topicsRouter.post("/share/claim", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 

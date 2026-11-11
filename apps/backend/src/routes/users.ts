@@ -6,7 +6,7 @@ import { computeLevel, computeRank, ensureDailyMissions, getCurrentStreak, getWe
 
 export const usersRouter = Router();
 
-usersRouter.get("/me/overview", requireAuth, async (req: any, res) => {
+usersRouter.get("/me/overview", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   const role = req.user?.role;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -192,7 +192,7 @@ usersRouter.get("/me/overview", requireAuth, async (req: any, res) => {
   }
 });
 
-usersRouter.get("/me/missions", requireAuth, async (req: any, res) => {
+usersRouter.get("/me/missions", requireAuth, async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -217,7 +217,7 @@ usersRouter.get("/me/missions", requireAuth, async (req: any, res) => {
   }
 });
 
-usersRouter.get("/me/weekly-goal", requireAuth, async (req: any, res) => {
+usersRouter.get("/me/weekly-goal", requireAuth, async (req, res) => {
   try {
     const offset = Number(req.headers["x-timezone-offset"] ?? 0);
     res.json(await getWeeklyGoal(req.user.sub, Number.isFinite(offset) ? offset : 0));
@@ -227,7 +227,7 @@ usersRouter.get("/me/weekly-goal", requireAuth, async (req: any, res) => {
   }
 });
 
-usersRouter.post("/me/activity", requireAuth, async (req: any, res) => {
+usersRouter.post("/me/activity", requireAuth, async (req, res) => {
   const body = z.object({
     type: z.enum(["app_open", "view_topic", "visit_profile", "visit_missions", "visit_flashcards", "complete_flashcard_session"]),
     amount: z.number().int().min(1).max(20).default(1),

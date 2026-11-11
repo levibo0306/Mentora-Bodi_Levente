@@ -1,11 +1,12 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { getUserOverview } from "../api/users";
+import { getUserOverview, type UserOverview } from "../api/users";
+import { getErrorMessage } from "../api/http";
 import { PageLayout } from "../ui/PageLayout";
 
 export const Profile = () => {
   const { user, updateProfile } = useAuth();
-  const [overview, setOverview] = useState<any>(null);
+  const [overview, setOverview] = useState<UserOverview | null>(null);
   const [username, setUsername] = useState(user?.username ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -44,8 +45,8 @@ export const Profile = () => {
       setCurrentPassword("");
       setNewPassword("");
       setStatus({ type: "success", text: "A fiókadataid frissültek." });
-    } catch (error: any) {
-      setStatus({ type: "error", text: error?.message ?? "Nem sikerült menteni a módosításokat." });
+    } catch (error: unknown) {
+      setStatus({ type: "error", text: getErrorMessage(error, "Nem sikerült menteni a módosításokat.") });
     } finally {
       setSaving(false);
     }

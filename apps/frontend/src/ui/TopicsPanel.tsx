@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { claimTopic, createTopic, deleteTopic, getTopics, Topic } from "../api/topics";
 import { Link } from "react-router-dom";
 import { TopicShareModal } from "./TopicShareModal";
+import { getErrorMessage } from "../api/http";
 
 const topicColors = [
   "#FF6B35", "#F4511E", "#E53935", "#D81B60", "#8E24AA", "#5E35B1",
@@ -45,8 +46,8 @@ export const TopicsPanel = () => {
       setColor(topicColors[0]);
       setStatus("A téma elkészült.");
       await load();
-    } catch (error: any) {
-      setStatus(error?.message ?? "Nem sikerült létrehozni a témát.");
+    } catch (error: unknown) {
+      setStatus(getErrorMessage(error, "Nem sikerült létrehozni a témát."));
     }
   };
 
@@ -65,8 +66,8 @@ export const TopicsPanel = () => {
       setStatus("Sikeresen hozzáadva.");
       setClaimValue("");
       await load();
-    } catch (e: any) {
-      setStatus(e?.message ?? "Nem sikerült hozzáadni.");
+    } catch (error: unknown) {
+      setStatus(getErrorMessage(error, "Nem sikerült hozzáadni."));
     }
   };
 

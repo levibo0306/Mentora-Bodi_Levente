@@ -4,10 +4,12 @@ Ez a mappa a Mentora működését fájlonként magyarázza el. A leírásokat a
 
 ## Hogyan érdemes olvasni?
 
-1. Kezdd a `frontend/index_tsx_leiras.md` és a `backend/index_ts_leiras.md` fájlokkal. Ezek adják a két alkalmazás belépési pontjait.
+1. Kezdd a `frontend/main_tsx_leiras.md`, `frontend/app_tsx_leiras.md` és `backend/index_ts_leiras.md` fájlokkal. Ezek adják a két alkalmazás belépési pontjait.
 2. Ezután olvasd el az `auth_context_tsx_leiras.md` és `middleware/auth_ts_leiras.md` dokumentumokat a bejelentkezés megértéséhez.
 3. Egy konkrét funkciónál kövesd ezt a láncot: **oldal vagy UI komponens → frontend API fájl → backend route → service → adatbázistábla**.
 4. A teljes adatmodellt a `backend/schema_sql_leiras.md`, a rangokat és XP-t a `backend/services/gamification_ts_leiras.md` magyarázza.
+
+Ha még nem ismered a Reactet vagy egyetlen folyamatos magyarázatot szeretnél, először a [`../MENTORA_KEZIKONYV.md`](../MENTORA_KEZIKONYV.md) fájlt olvasd el.
 
 ## Fő adatáramlás
 

@@ -12,9 +12,13 @@ type AuthContextType = {
   logout: () => void;
 };
 
-const AuthContext = createContext<AuthContextType>({} as any);
+const AuthContext = createContext<AuthContextType | null>(null);
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("A useAuth csak AuthProvideren belül használható.");
+  return context;
+}
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
