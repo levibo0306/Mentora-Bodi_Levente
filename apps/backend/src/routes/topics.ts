@@ -1,3 +1,4 @@
+import { asyncRoute } from "../middleware/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import { nanoid } from "nanoid";
@@ -15,7 +16,7 @@ const TopicSchema = z.object({
   color: z.string().max(32).optional(),
 });
 
-topicsRouter.get("/", requireAuth, async (req, res) => {
+topicsRouter.get("/", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -34,9 +35,9 @@ topicsRouter.get("/", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
-topicsRouter.get("/:id", requireAuth, async (req, res) => {
+topicsRouter.get("/:id", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
@@ -58,9 +59,9 @@ topicsRouter.get("/:id", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
-topicsRouter.get("/:id/stats", requireAuth, requireRole("teacher"), async (req, res) => {
+topicsRouter.get("/:id/stats", requireAuth, requireRole("teacher"), asyncRoute(async (req, res) => {
   const userId = req.user.sub;
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
   try {
@@ -84,9 +85,9 @@ topicsRouter.get("/:id/stats", requireAuth, requireRole("teacher"), async (req, 
     console.error(error);
     res.status(500).json({ error: "Nem sikerült betölteni a témastatisztikát." });
   }
-});
+}));
 
-topicsRouter.post("/", requireAuth, async (req, res) => {
+topicsRouter.post("/", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -110,9 +111,9 @@ topicsRouter.post("/", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
-topicsRouter.put("/:id", requireAuth, async (req, res) => {
+topicsRouter.put("/:id", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -144,9 +145,9 @@ topicsRouter.put("/:id", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
-topicsRouter.delete("/:id", requireAuth, async (req, res) => {
+topicsRouter.delete("/:id", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -159,10 +160,10 @@ topicsRouter.delete("/:id", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
 // Share topic
-topicsRouter.post("/:id/share", requireAuth, async (req, res) => {
+topicsRouter.post("/:id/share", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
@@ -210,10 +211,10 @@ topicsRouter.post("/:id/share", requireAuth, async (req, res) => {
   }
 
   res.json({ tokens });
-});
+}));
 
 // Claim shared topic
-topicsRouter.post("/share/claim", requireAuth, async (req, res) => {
+topicsRouter.post("/share/claim", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -242,4 +243,4 @@ topicsRouter.post("/share/claim", requireAuth, async (req, res) => {
   );
 
   res.json({ token: newToken });
-});
+}));

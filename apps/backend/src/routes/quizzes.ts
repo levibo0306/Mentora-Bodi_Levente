@@ -1,3 +1,4 @@
+import { asyncRoute } from "../middleware/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db";
@@ -32,9 +33,9 @@ async function canAccessQuiz(quizId: string, userId: string) {
  * --- KVÍZ CRUD ---
  */
 
-quizzesRouter.get("/", requireAuth, async (req, res) => {
+quizzesRouter.get("/", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
-  const topicId = typeof req.query.topic_id === "string" ? req.query.topic_id : null;
+  const topicId = z.string().uuid().optional().parse(req.query.topic_id);
 
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -96,9 +97,9 @@ quizzesRouter.get("/", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
-quizzesRouter.get("/shared-with-me", requireAuth, async (req, res) => {
+quizzesRouter.get("/shared-with-me", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -125,9 +126,9 @@ quizzesRouter.get("/shared-with-me", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
-quizzesRouter.get("/importable", requireAuth, async (req, res) => {
+quizzesRouter.get("/importable", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   try {
@@ -146,9 +147,9 @@ quizzesRouter.get("/importable", requireAuth, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Nem sikerült betölteni az importálható kvízeket." });
   }
-});
+}));
 
-quizzesRouter.get("/:id/results", requireAuth, async (req, res) => {
+quizzesRouter.get("/:id/results", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -226,9 +227,9 @@ quizzesRouter.get("/:id/results", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
-quizzesRouter.get("/:id", requireAuth, async (req, res) => {
+quizzesRouter.get("/:id", requireAuth, asyncRoute(async (req, res) => {
   const params = uuidParam.safeParse(req.params);
   if (!params.success) return res.status(400).json({ error: "Érvénytelen kvízazonosító." });
   const { id } = params.data;
@@ -250,7 +251,7 @@ quizzesRouter.get("/:id", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
 const CreateQuiz = z.object({
   title: z.string().min(1).max(120),
@@ -259,7 +260,7 @@ const CreateQuiz = z.object({
   topic_id: z.string().uuid().optional(),
 });
 
-quizzesRouter.post("/", requireAuth, async (req, res) => {
+quizzesRouter.post("/", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -283,9 +284,9 @@ quizzesRouter.post("/", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
-quizzesRouter.put("/:id", requireAuth, async (req, res) => {
+quizzesRouter.put("/:id", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -319,9 +320,9 @@ quizzesRouter.put("/:id", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
-quizzesRouter.delete("/:id", requireAuth, async (req, res) => {
+quizzesRouter.delete("/:id", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -337,7 +338,7 @@ quizzesRouter.delete("/:id", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
 /**
  * --- KÉRDÉSEK ---
@@ -351,7 +352,7 @@ const QuestionSchema = z.object({
   difficulty: z.number().int().min(1).max(5).optional(),
 });
 
-quizzesRouter.post("/:id/questions", requireAuth, async (req, res) => {
+quizzesRouter.post("/:id/questions", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -388,9 +389,9 @@ quizzesRouter.post("/:id/questions", requireAuth, async (req, res) => {
     console.error("Backend Error:", err);
     res.status(400).json({ error: err.message ?? "Bad request" });
   }
-});
+}));
 
-quizzesRouter.put("/:id/questions/:qid", requireAuth, async (req, res) => {
+quizzesRouter.put("/:id/questions/:qid", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -433,9 +434,9 @@ quizzesRouter.put("/:id/questions/:qid", requireAuth, async (req, res) => {
     console.error("Backend Error:", err);
     res.status(400).json({ error: err.message ?? "Bad request" });
   }
-});
+}));
 
-quizzesRouter.get("/:id/questions", requireAuth, async (req, res) => {
+quizzesRouter.get("/:id/questions", requireAuth, asyncRoute(async (req, res) => {
   const params = uuidParam.safeParse(req.params);
   if (!params.success) return res.status(400).json({ error: "Érvénytelen kvízazonosító." });
   const { id } = params.data;
@@ -458,16 +459,16 @@ quizzesRouter.get("/:id/questions", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
-quizzesRouter.get("/:id/adaptive-questions", requireAuth, async (req, res) => {
+quizzesRouter.get("/:id/adaptive-questions", requireAuth, asyncRoute(async (req, res) => {
   const params = uuidParam.safeParse(req.params);
   if (!params.success) return res.status(400).json({ error: "Érvénytelen kvízazonosító." });
   const { id } = params.data;
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const requestedLimit = Number(req.query.limit ?? 10);
+  const requestedLimit = Number(z.string().optional().parse(req.query.limit) ?? 10);
   const limit = Number.isFinite(requestedLimit) ? Math.min(20, Math.max(1, Math.trunc(requestedLimit))) : 10;
 
   try {
@@ -522,7 +523,7 @@ quizzesRouter.get("/:id/adaptive-questions", requireAuth, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Nem sikerült összeállítani a személyre szabott kérdéssort." });
   }
-});
+}));
 
 /**
  * --- KITÖLTÉS + ADAPTÍV LOGIKA ---
@@ -531,7 +532,7 @@ quizzesRouter.get("/:id/adaptive-questions", requireAuth, async (req, res) => {
  * - Question stat + difficulty frissítés (1 UPDATE / kérdés)
  * - XP jóváírás
  */
-quizzesRouter.post("/:id/attempt", requireAuth, async (req, res) => {
+quizzesRouter.post("/:id/attempt", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -638,4 +639,4 @@ quizzesRouter.post("/:id/attempt", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));

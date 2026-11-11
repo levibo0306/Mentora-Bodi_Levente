@@ -56,6 +56,54 @@ describe("backend application", () => {
     expect(query).not.toHaveBeenCalled();
   });
 
+  test("keeps every API module reachable after malformed requests", async () => {
+    const { app } = await import("../src/index");
+    const client = request(app);
+    const id = "00000000-0000-4000-8000-000000000001";
+    const token = signToken({ sub: id, email: "teacher@example.com", role: "teacher" });
+    const invalid = [
+      client.get("/api/topics/not-a-uuid"),
+      client.get("/api/topics/not-a-uuid/stats"),
+      client.post("/api/topics").send({}),
+      client.put(`/api/topics/${id}`).send({ name: [] }),
+      client.delete("/api/topics/not-a-uuid"),
+      client.post(`/api/topics/${id}/share`).send({ recipients: ["invalid"] }),
+      client.post("/api/topics/share/claim").send({}),
+      client.get("/api/flashcards/packs?topic_id=not-a-uuid"),
+      client.get("/api/flashcards/packs?topic_id[]=wrong"),
+      client.get("/api/flashcards/packs/not-a-uuid"),
+      client.post("/api/flashcards/packs").send({}),
+      client.post(`/api/flashcards/packs/${id}/review`).send({}),
+      client.get("/api/flashcards/packs/not-a-uuid/stats"),
+      client.post("/api/flashcards/packs/not-a-uuid/share").send({}),
+      client.post("/api/flashcards/share/claim").send({}),
+      client.delete("/api/flashcards/packs/not-a-uuid"),
+      client.get("/api/feedback/not-a-uuid"),
+      client.get("/api/feedback/not-a-uuid/targets"),
+      client.post(`/api/feedback/${id}`).send({}),
+      client.post("/api/users/me/activity").send({}),
+      client.get("/api/users/me/missions?limit[toString]=oops"),
+      client.get("/api/quizzes?topic_id=not-a-uuid"),
+      client.get(`/api/quizzes/${id}/adaptive-questions?limit[toString]=oops`),
+      client.post("/api/share/claim").send({}),
+      client.post("/api/auth/login").send({}),
+    ];
+
+    for (const badRequest of invalid) {
+      await badRequest.set("Authorization", `Bearer ${token}`).expect(400);
+      await client.get("/health").expect(200, { ok: true });
+    }
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  test("handles an unexpected asynchronous database failure without exposing details", async () => {
+    const { app } = await import("../src/index");
+    query.mockRejectedValueOnce(new Error("private connection details"));
+    const client = request(app);
+    await client.get("/api/share/example-code").expect(500, { error: "Belső szerverhiba." });
+    await client.get("/health").expect(200, { ok: true });
+  });
+
   test("validates AI generation input before calling the model", async () => {
     const { app } = await import("../src/index");
     const token = signToken({

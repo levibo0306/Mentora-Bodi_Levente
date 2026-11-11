@@ -1,3 +1,4 @@
+import { asyncRoute } from "../middleware/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -14,7 +15,7 @@ const RegisterBody = z.object({
   role: z.enum(["teacher", "student"]),
 });
 
-authRouter.post("/register", async (req, res) => {
+authRouter.post("/register", asyncRoute(async (req, res) => {
   try {
     const { username, email, password, role } = RegisterBody.parse(req.body);
     const password_hash = await bcrypt.hash(password, 12);
@@ -31,14 +32,14 @@ authRouter.post("/register", async (req, res) => {
     console.error("Register error:", err);
     res.status(400).json({ error: err.message || "Registration failed" });
   }
-});
+}));
 
 const LoginBody = z.object({
   identifier: z.string().min(3),
   password: z.string().min(1),
 });
 
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", asyncRoute(async (req, res) => {
   try {
     const { identifier, password } = LoginBody.parse(req.body);
     const id = identifier.trim().toLowerCase();
@@ -65,9 +66,9 @@ authRouter.post("/login", async (req, res) => {
     console.error("Login error:", err);
     res.status(400).json({ error: err.message || "Login failed" });
   }
-});
+}));
 
-authRouter.get("/me", requireAuth, async (req, res) => {
+authRouter.get("/me", requireAuth, asyncRoute(async (req, res) => {
   try {
     const user = req.user;
     
@@ -98,7 +99,7 @@ authRouter.get("/me", requireAuth, async (req, res) => {
     console.error("Me endpoint error:", err);
     res.status(500).json({ error: "Server error" });
   }
-});
+}));
 
 const UpdateProfileBody = z.object({
   username: z.string().trim().min(3).max(24).regex(/^[a-zA-Z0-9_.]+$/),
@@ -107,7 +108,7 @@ const UpdateProfileBody = z.object({
   new_password: z.string().min(6).max(72).optional(),
 });
 
-authRouter.patch("/me", requireAuth, async (req, res) => {
+authRouter.patch("/me", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -145,9 +146,9 @@ authRouter.patch("/me", requireAuth, async (req, res) => {
     console.error("Profile update error:", err);
     res.status(500).json({ error: "Nem sikerült módosítani a profilt." });
   }
-});
+}));
 
-authRouter.post("/logout", requireAuth, async (req, res) => {
+authRouter.post("/logout", requireAuth, asyncRoute(async (req, res) => {
   try {
     const token = req.token;
     if (!token) return res.status(401).json({ error: "Unauthorized" });
@@ -157,6 +158,6 @@ authRouter.post("/logout", requireAuth, async (req, res) => {
     console.error("Logout error:", err);
     res.status(500).json({ error: "Logout failed" });
   }
-});
+}));
 
 export default authRouter;

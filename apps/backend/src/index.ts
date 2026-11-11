@@ -2,6 +2,7 @@ import "dotenv/config";
 import "./instrument";
 import express, { type ErrorRequestHandler } from "express";
 import cors from "cors";
+import { ZodError } from "zod";
 import * as Sentry from "@sentry/node";
 import { healthcheck } from "./db";
 import { authRouter } from "./routes/auth";
@@ -69,15 +70,24 @@ app.use("/api/topics", topicsRouter);
 app.use("/api/feedback", feedbackRouter);
 
 // Error handler
-const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
+const errorHandler: ErrorRequestHandler = (error, _req, res, next) => {
+  if (res.headersSent) return next(error);
+  if (error instanceof ZodError) {
+    res.status(400).json({ error: "Érvénytelen kérési adatok." });
+    return;
+  }
   if (error?.type === "entity.parse.failed") {
     res.status(400).json({ error: "Érvénytelen JSON-adatok." });
     return;
   }
+  const status = error?.status;
+  if (Number.isInteger(status) && status >= 400 && status < 500) {
+    res.status(status).json({ error: "A kérés nem dolgozható fel." });
+    return;
+  }
   metrics.errors++;
   Sentry.captureException(error);
-  const message = error instanceof Error ? error.message : "server error";
-  res.status(500).json({ error: message });
+  res.status(500).json({ error: "Belső szerverhiba." });
 };
 app.use(errorHandler);
 

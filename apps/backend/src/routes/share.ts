@@ -1,3 +1,4 @@
+import { asyncRoute } from "../middleware/asyncRoute";
 import { Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -9,7 +10,7 @@ import { updateDailyMissionsOnAttempt } from "../services/gamification";
 export const shareRouter = Router();
 
 // Create share link(s) for a quiz (teacher or student with reshare permission)
-shareRouter.post("/quizzes/:id/share", requireAuth, async (req, res) => {
+shareRouter.post("/quizzes/:id/share", requireAuth, asyncRoute(async (req, res) => {
   const { id } = req.params;
   const userId = req.user.sub;
 
@@ -84,10 +85,10 @@ shareRouter.post("/quizzes/:id/share", requireAuth, async (req, res) => {
   }
 
   res.json({ tokens });
-});
+}));
 
 // Claim a shared quiz by code/link
-shareRouter.post("/share/claim", requireAuth, async (req, res) => {
+shareRouter.post("/share/claim", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -120,10 +121,10 @@ shareRouter.post("/share/claim", requireAuth, async (req, res) => {
   );
 
   res.json({ token: newToken });
-});
+}));
 
 // Student/public: get shared quiz by token
-shareRouter.get("/share/:token", optionalAuth, async (req, res, next) => {
+shareRouter.get("/share/:token", optionalAuth, asyncRoute(async (req, res, next) => {
   const token = req.params.token;
   if (token.length < 8) return res.status(404).json({ error: "Invalid link" });
 
@@ -153,10 +154,10 @@ shareRouter.get("/share/:token", optionalAuth, async (req, res, next) => {
   );
 
   res.json({ quiz, questions: qs.rows });
-});
+}));
 
 // Student/public: submit answers and get score
-shareRouter.post("/share/:token/submit", optionalAuth, async (req, res, next) => {
+shareRouter.post("/share/:token/submit", optionalAuth, asyncRoute(async (req, res, next) => {
   const token = req.params.token;
   if (token.length < 8) return res.status(404).json({ error: "Invalid link" });
   const parsed = quizSubmission.safeParse(req.body);
@@ -208,4 +209,4 @@ shareRouter.post("/share/:token/submit", optionalAuth, async (req, res, next) =>
     if (error instanceof QuizAttemptError) return res.status(error.status).json({ error: error.message });
     return next(error);
   }
-});
+}));

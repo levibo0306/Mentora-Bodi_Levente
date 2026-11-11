@@ -1,3 +1,4 @@
+import { asyncRoute } from "../middleware/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db";
@@ -6,7 +7,7 @@ import { computeLevel, computeRank, ensureDailyMissions, getCurrentStreak, getWe
 
 export const usersRouter = Router();
 
-usersRouter.get("/me/overview", requireAuth, async (req, res) => {
+usersRouter.get("/me/overview", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   const role = req.user?.role;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -190,14 +191,14 @@ usersRouter.get("/me/overview", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
-usersRouter.get("/me/missions", requireAuth, async (req, res) => {
+usersRouter.get("/me/missions", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const limit = Number(req.query.limit ?? 14);
-  const safeLimit = Number.isFinite(limit) ? Math.min(60, Math.max(1, limit)) : 14;
+  const limit = Number(z.string().optional().parse(req.query.limit) ?? 14);
+  const safeLimit = Number.isFinite(limit) ? Math.min(60, Math.max(1, Math.trunc(limit))) : 14;
 
   try {
     const offset = Number(req.headers["x-timezone-offset"] ?? 0);
@@ -215,9 +216,9 @@ usersRouter.get("/me/missions", requireAuth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-});
+}));
 
-usersRouter.get("/me/weekly-goal", requireAuth, async (req, res) => {
+usersRouter.get("/me/weekly-goal", requireAuth, asyncRoute(async (req, res) => {
   try {
     const offset = Number(req.headers["x-timezone-offset"] ?? 0);
     res.json(await getWeeklyGoal(req.user.sub, Number.isFinite(offset) ? offset : 0));
@@ -225,9 +226,9 @@ usersRouter.get("/me/weekly-goal", requireAuth, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Nem sikerült betölteni a heti célt." });
   }
-});
+}));
 
-usersRouter.post("/me/activity", requireAuth, async (req, res) => {
+usersRouter.post("/me/activity", requireAuth, asyncRoute(async (req, res) => {
   const body = z.object({
     type: z.enum(["app_open", "view_topic", "visit_profile", "visit_missions", "visit_flashcards", "complete_flashcard_session"]),
     amount: z.number().int().min(1).max(20).default(1),
@@ -241,4 +242,4 @@ usersRouter.post("/me/activity", requireAuth, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Nem sikerült menteni az aktivitást." });
   }
-});
+}));

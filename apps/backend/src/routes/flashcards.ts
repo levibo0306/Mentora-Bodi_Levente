@@ -1,3 +1,4 @@
+import { asyncRoute } from "../middleware/asyncRoute";
 import { Router } from "express";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -27,9 +28,9 @@ async function canReadPack(packId: string, userId: string) {
   return pack && (pack.is_owner || pack.is_shared) ? pack : null;
 }
 
-flashcardsRouter.get("/packs", requireAuth, async (req, res) => {
+flashcardsRouter.get("/packs", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user.sub;
-  const topicId = typeof req.query.topic_id === "string" ? uuid.parse(req.query.topic_id) : null;
+  const topicId = uuid.optional().parse(req.query.topic_id) ?? null;
   try {
     const result = await pool.query(
       `SELECT p.id, p.title, p.description, p.topic_id, p.owner_id, p.created_at, p.updated_at,
@@ -52,9 +53,9 @@ flashcardsRouter.get("/packs", requireAuth, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Nem sikerült betölteni a Flashcards csomagokat." });
   }
-});
+}));
 
-flashcardsRouter.get("/packs/:id", requireAuth, async (req, res) => {
+flashcardsRouter.get("/packs/:id", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user.sub;
   const id = uuid.parse(req.params.id);
   try {
@@ -74,9 +75,9 @@ flashcardsRouter.get("/packs/:id", requireAuth, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Nem sikerült betölteni a Flashcards csomagot." });
   }
-});
+}));
 
-flashcardsRouter.post("/packs", requireAuth, async (req, res) => {
+flashcardsRouter.post("/packs", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user.sub;
   const body = PackSchema.parse(req.body);
   const client = await pool.connect();
@@ -101,9 +102,9 @@ flashcardsRouter.post("/packs", requireAuth, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Nem sikerült létrehozni a Flashcards csomagot." });
   } finally { client.release(); }
-});
+}));
 
-flashcardsRouter.post("/packs/import-quiz", requireAuth, async (req, res) => {
+flashcardsRouter.post("/packs/import-quiz", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user.sub;
   const parsed = z.object({ quiz_id: uuid, title: z.string().trim().min(2).max(120).optional() }).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Érvénytelen kvízimport." });
@@ -144,9 +145,9 @@ flashcardsRouter.post("/packs/import-quiz", requireAuth, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Nem sikerült Flashcards csomagot készíteni a kvízből." });
   } finally { client.release(); }
-});
+}));
 
-flashcardsRouter.post("/packs/:id/review", requireAuth, async (req, res) => {
+flashcardsRouter.post("/packs/:id/review", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user.sub;
   const packId = uuid.parse(req.params.id);
   const { card_id, quality } = z.object({ card_id: uuid, quality: z.number().int().min(0).max(5) }).parse(req.body);
@@ -173,9 +174,9 @@ flashcardsRouter.post("/packs/:id/review", requireAuth, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Nem sikerült menteni az ismétlést." });
   }
-});
+}));
 
-flashcardsRouter.get("/packs/:id/stats", requireAuth, async (req, res) => {
+flashcardsRouter.get("/packs/:id/stats", requireAuth, asyncRoute(async (req, res) => {
   const id = uuid.parse(req.params.id);
   try {
     const owner = await pool.query("SELECT 1 FROM flashcard_packs WHERE id=$1 AND owner_id=$2", [id, req.user.sub]);
@@ -193,9 +194,9 @@ flashcardsRouter.get("/packs/:id/stats", requireAuth, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Nem sikerült betölteni a statisztikát." });
   }
-});
+}));
 
-flashcardsRouter.post("/packs/:id/share", requireAuth, async (req, res) => {
+flashcardsRouter.post("/packs/:id/share", requireAuth, asyncRoute(async (req, res) => {
   const id = uuid.parse(req.params.id);
   const body = z.object({ recipients: z.array(z.string().email()).optional() }).parse(req.body ?? {});
   const owner = await pool.query("SELECT 1 FROM flashcard_packs WHERE id=$1 AND owner_id=$2", [id, req.user.sub]);
@@ -221,9 +222,9 @@ flashcardsRouter.post("/packs/:id/share", requireAuth, async (req, res) => {
     tokens.push({ token, recipient_email: recipient.email });
   }
   res.json({ tokens });
-});
+}));
 
-flashcardsRouter.post("/share/claim", requireAuth, async (req, res) => {
+flashcardsRouter.post("/share/claim", requireAuth, asyncRoute(async (req, res) => {
   const { token } = z.object({ token: z.string().trim().min(6) }).parse(req.body);
   const share = (await pool.query("SELECT * FROM flashcard_shares WHERE token=$1", [token])).rows[0];
   if (!share) return res.status(404).json({ error: "Érvénytelen Flashcards-kód." });
@@ -235,10 +236,10 @@ flashcardsRouter.post("/share/claim", requireAuth, async (req, res) => {
     [share.pack_id, claimedToken, req.user.sub, share.shared_by]
   );
   res.json({ token: claimedToken });
-});
+}));
 
-flashcardsRouter.delete("/packs/:id", requireAuth, async (req, res) => {
+flashcardsRouter.delete("/packs/:id", requireAuth, asyncRoute(async (req, res) => {
   const result = await pool.query("DELETE FROM flashcard_packs WHERE id=$1 AND owner_id=$2", [uuid.parse(req.params.id), req.user.sub]);
   if (!result.rowCount) return res.status(404).json({ error: "A Flashcards csomag nem található." });
   res.json({ ok: true });
-});
+}));

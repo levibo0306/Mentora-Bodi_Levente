@@ -1,3 +1,4 @@
+import { asyncRoute } from "../middleware/asyncRoute";
 import { Router, type Response } from "express";
 import multer from "multer";
 import { z } from "zod";
@@ -25,7 +26,7 @@ function requestAbortSignal(res: Response) {
   return controller.signal;
 }
 
-quizGenerationRouter.post("/generate-ai", requireAuth, async (req, res) => {
+quizGenerationRouter.post("/generate-ai", requireAuth, asyncRoute(async (req, res) => {
   try {
     const { text, count } = textRequest.parse(req.body);
     const questions = await generateQuizFromText(text, count, requestAbortSignal(res));
@@ -36,9 +37,9 @@ quizGenerationRouter.post("/generate-ai", requireAuth, async (req, res) => {
     console.error("AI Error:", error);
     return res.status(500).json({ error: "Nem sikerült a kérdések generálása." });
   }
-});
+}));
 
-quizGenerationRouter.post("/generate-ai-file", requireAuth, async (req, res) => {
+quizGenerationRouter.post("/generate-ai-file", requireAuth, asyncRoute(async (req, res) => {
   try {
     await new Promise<void>((resolve, reject) => {
       uploadDocument(req, res, (error) => error ? reject(error) : resolve());
@@ -71,4 +72,4 @@ quizGenerationRouter.post("/generate-ai-file", requireAuth, async (req, res) => 
     console.error("AI document error:", error);
     return res.status(500).json({ error: "Nem sikerült kérdéseket generálni a dokumentumból." });
   }
-});
+}));

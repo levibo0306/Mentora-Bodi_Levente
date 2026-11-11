@@ -1,3 +1,4 @@
+import { asyncRoute } from "../middleware/asyncRoute";
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db";
@@ -51,7 +52,7 @@ async function getFeedbackTargets(pair: { teacherId: string; studentId: string }
   )).rows as Array<{ type: "topic" | "quiz" | "flashcards"; id: string; title: string }>;
 }
 
-feedbackRouter.get("/contacts", requireAuth, async (req, res) => {
+feedbackRouter.get("/contacts", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user.sub;
   const role = req.user.role;
   try {
@@ -78,9 +79,9 @@ feedbackRouter.get("/contacts", requireAuth, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Nem sikerült betölteni a kapcsolatokat." });
   }
-});
+}));
 
-feedbackRouter.get("/:partnerId", requireAuth, async (req, res) => {
+feedbackRouter.get("/:partnerId", requireAuth, asyncRoute(async (req, res) => {
   const partnerId = uuid.parse(req.params.partnerId);
   const pair = await resolvePair(req.user, partnerId);
   if (!pair) return res.status(403).json({ error: "Érvénytelen kapcsolat." });
@@ -106,9 +107,9 @@ feedbackRouter.get("/:partnerId", requireAuth, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Nem sikerült betölteni a visszajelzéseket." });
   }
-});
+}));
 
-feedbackRouter.get("/:partnerId/targets", requireAuth, async (req, res) => {
+feedbackRouter.get("/:partnerId/targets", requireAuth, asyncRoute(async (req, res) => {
   const partnerId = uuid.parse(req.params.partnerId);
   const pair = await resolvePair(req.user, partnerId);
   if (!pair) return res.status(403).json({ error: "Érvénytelen kapcsolat." });
@@ -118,9 +119,9 @@ feedbackRouter.get("/:partnerId/targets", requireAuth, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Nem sikerült betölteni a visszajelzés céljait." });
   }
-});
+}));
 
-feedbackRouter.post("/:partnerId", requireAuth, async (req, res) => {
+feedbackRouter.post("/:partnerId", requireAuth, asyncRoute(async (req, res) => {
   const partnerId = uuid.parse(req.params.partnerId);
   const body = z.object({
     message: z.string().trim().min(1).max(2000),
@@ -151,4 +152,4 @@ feedbackRouter.post("/:partnerId", requireAuth, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Nem sikerült elküldeni a visszajelzést." });
   }
-});
+}));
