@@ -4,7 +4,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { pool } from "../db";
 import { optionalAuth, requireAuth } from "../middleware/auth";
-import { checkAssessment, getAssessmentQuestions, QuizAttemptError, quizSubmission, saveQuizAttempt, validateAssessmentAnswers } from "../services/quizAttempts";
+import { buildAnswerReview, checkAssessment, getAssessmentQuestions, QuizAttemptError, quizSubmission, saveQuizAttempt, validateAssessmentAnswers } from "../services/quizAttempts";
 import { updateDailyMissionsOnAttempt } from "../services/gamification";
 
 export const shareRouter = Router();
@@ -176,7 +176,7 @@ shareRouter.post("/share/:token/submit", optionalAuth, asyncRoute(async (req, re
 
   const userId = req.user?.sub ?? null;
   try {
-    const { score, max, scorePercent } = await saveQuizAttempt(quizId, userId, async (client, assessment) => {
+    const { score, max, scorePercent, review } = await saveQuizAttempt(quizId, userId, async (client, assessment) => {
       const questions = await getAssessmentQuestions(client, quizId);
       if (assessment) validateAssessmentAnswers(questions, answers);
       else {
@@ -204,7 +204,7 @@ shareRouter.post("/share/:token/submit", optionalAuth, asyncRoute(async (req, re
         scorePercent,
       ]);
 
-      return { score, max, scorePercent };
+      return { score, max, scorePercent, review: assessment ? undefined : buildAnswerReview(questions, answers) };
     }, q.rows[0].recipient_id);
 
     if (userId) {
@@ -212,7 +212,7 @@ shareRouter.post("/share/:token/submit", optionalAuth, asyncRoute(async (req, re
       await updateDailyMissionsOnAttempt(userId, scorePercent, Number.isFinite(tzOffset) ? tzOffset : 0);
     }
 
-    res.json({ score, max });
+    res.json(review ? { score, max, review } : { score, max });
   } catch (error) {
     if (error instanceof QuizAttemptError) return res.status(error.status).json({ error: error.message });
     return next(error);

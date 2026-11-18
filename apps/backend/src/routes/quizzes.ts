@@ -5,7 +5,7 @@ import { pool } from "../db";
 import { requireAuth } from "../middleware/auth";
 import { addXp, updateDailyMissionsOnAttempt } from "../services/gamification";
 import { rankAdaptiveQuestions } from "../services/adaptive";
-import { checkAssessment, getAssessmentQuestions, QuizAttemptError, quizSubmission, saveQuizAttempt, validateAssessmentAnswers } from "../services/quizAttempts";
+import { buildAnswerReview, checkAssessment, getAssessmentQuestions, QuizAttemptError, quizSubmission, saveQuizAttempt, validateAssessmentAnswers } from "../services/quizAttempts";
 import { quizGenerationRouter } from "./quizGeneration";
 
 export const quizzesRouter = Router();
@@ -170,7 +170,7 @@ quizzesRouter.get("/:id/results", requireAuth, asyncRoute(async (req, res) => {
       return res.status(403).json({ error: "Ehhez nincs jogosultságod (vagy nem létezik)" });
 
     const questionsRes = await pool.query(
-      `SELECT id, prompt, options, correct_index
+      `SELECT id, prompt, options, correct_index, explanation
        FROM questions
        WHERE quiz_id=$1
        ORDER BY id`,
@@ -181,6 +181,7 @@ quizzesRouter.get("/:id/results", requireAuth, asyncRoute(async (req, res) => {
       prompt: string;
       options: string[];
       correct_index: number;
+      explanation: string | null;
     }>;
 
     const attemptsRes = await pool.query(
@@ -557,13 +558,13 @@ quizzesRouter.post("/:id/attempt", requireAuth, asyncRoute(async (req, res) => {
 
   try {
     if (!await canAccessQuiz(id, userId)) return res.status(404).json({ error: "A kvíz nem érhető el." });
-    const { score, total, correct, attemptId } = await saveQuizAttempt(id, userId, async (client, assessment) => {
+    const { score, total, correct, attemptId, review } = await saveQuizAttempt(id, userId, async (client, assessment) => {
       // Kérdések lekérése
       const answeredQuestionIds = Object.keys(answers);
       if (!answeredQuestionIds.length) throw new QuizAttemptError(400, "Legalább egy választ adj meg.");
       const examQuestions = assessment ? await getAssessmentQuestions(client, id) : null;
-      const questions = examQuestions ?? (await client.query<{ id: string; correct_index: number }>(
-        "SELECT id, correct_index FROM questions WHERE quiz_id=$1 AND id = ANY($2::uuid[])",
+      const questions = examQuestions ?? (await client.query<{ id: string; correct_index: number; explanation: string | null }>(
+        "SELECT id, correct_index, explanation FROM questions WHERE quiz_id=$1 AND id = ANY($2::uuid[]) ORDER BY id",
         [id, answeredQuestionIds]
       )).rows;
       if (examQuestions) validateAssessmentAnswers(examQuestions, answers);
@@ -631,7 +632,13 @@ quizzesRouter.post("/:id/attempt", requireAuth, asyncRoute(async (req, res) => {
         [id, userId, answers, score]
       );
 
-      return { score, total: questions.length, correct: correctCount, attemptId: att.rows[0].id };
+      return {
+        score,
+        total: questions.length,
+        correct: correctCount,
+        attemptId: att.rows[0].id,
+        review: assessment ? undefined : buildAnswerReview(questions, answers),
+      };
     });
 
     // 3) XP jóváírás
@@ -646,6 +653,7 @@ quizzesRouter.post("/:id/attempt", requireAuth, asyncRoute(async (req, res) => {
       correct,
       xp_gained: xpReward,
       id: attemptId,
+      ...(review ? { review } : {}),
     });
   } catch (err) {
     if (err instanceof QuizAttemptError) return res.status(err.status).json({ error: err.message });

@@ -40,6 +40,7 @@ export type QuizResult = {
   score: number;   // Százalék (0-100)
   total: number;   // Összes kérdés száma
   correct: number; // Helyes válaszok száma
+  review?: Array<{ question_id: string; picked: number | null; correct_index: number; explanation?: string | null }>;
 };
 
 export type QuizQuestion = {

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, getErrorMessage } from "../api/http";
+import { AnswerReview, type ReviewItem } from "../ui/AnswerReview";
 
 type SharedQuestion = { id: string; prompt: string; options: string[] };
 type SharedQuizData = {
@@ -10,7 +11,7 @@ type SharedQuizData = {
 type SharedQuizResponse = Omit<SharedQuizData, "questions"> & {
   questions: Array<Omit<SharedQuestion, "options"> & { options: string[] | string }>;
 };
-type SubmitResult = { score: number; max: number };
+type SubmitResult = { score: number; max: number; review?: ReviewItem[] };
 
 function SharedPage({ children }: { children: ReactNode }) {
   return <main className="shared-quiz-page">{children}</main>;
@@ -20,7 +21,7 @@ function CenteredCard({ children }: { children: ReactNode }) {
   return <div className="shared-quiz-centered"><div className="result-card">{children}</div></div>;
 }
 
-function ResultView({ result, onBack }: { result: SubmitResult; onBack: () => void }) {
+function ResultView({ result, questions, onBack }: { result: SubmitResult; questions: SharedQuestion[]; onBack: () => void }) {
   const percentage = result.max > 0 ? Math.round((result.score / result.max) * 100) : 0;
   const passed = percentage >= 50;
 
@@ -35,6 +36,7 @@ function ResultView({ result, onBack }: { result: SubmitResult; onBack: () => vo
           ? "✨ Remek teljesítmény! Gratulálunk a sikeres eredményhez!"
           : "💪 Ne add fel! Próbáld meg újra, és biztosan sikerülni fog!"}
       </div>
+      {result.review && <AnswerReview questions={questions} review={result.review} />}
       <div className="shared-quiz-result-actions">
         <button onClick={onBack} className="btn btn-secondary">← Vissza</button>
         <button onClick={() => window.location.reload()} className="btn btn-primary">🔄 Újrapróbálom</button>
@@ -130,7 +132,7 @@ export function SharedQuiz() {
     );
   }
 
-  if (result) return <SharedPage><ResultView result={result} onBack={goBack} /></SharedPage>;
+  if (result) return <SharedPage><ResultView result={result} questions={quizData.questions} onBack={goBack} /></SharedPage>;
 
   const question = quizData.questions[currentStep];
   const selectedOption = answers[question.id];

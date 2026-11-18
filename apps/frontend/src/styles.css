@@ -550,6 +550,68 @@ button:active, .btn:active {
   color: #059669;
 }
 
+.answer-explanation {
+  margin-top: 4px;
+  color: #4b5563;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.answer-review {
+  margin-top: 28px;
+  text-align: left;
+}
+
+.answer-review h3 {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+.answer-review ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.answer-review-item {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  display: grid;
+  gap: 4px;
+  font-size: 15px;
+}
+
+.answer-review-item.correct { border-color: #a7e3c8; }
+.answer-review-item.wrong { border-color: #f5b5b5; }
+
+.answer-review-prompt {
+  font-weight: 600;
+  color: var(--dark);
+}
+
+.answer-review-explanation {
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f6f7f9;
+  color: #4b5563;
+}
+
+.answer-review-explanation span {
+  font-weight: 600;
+  color: var(--dark);
+}
+
+.answer-review-note {
+  margin-top: 20px;
+  color: #666;
+  font-size: 14px;
+}
+
 .is-wrong {
   color: var(--danger);
 }
@@ -1824,7 +1886,7 @@ button.option-card {
 
 /* ===== RESULT CARD ===== */
 .result-card {
-  max-width: 500px;
+  max-width: 640px;
   margin: 4rem auto;
   text-align: center;
   background: white;

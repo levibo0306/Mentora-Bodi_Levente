@@ -51,10 +51,25 @@ export async function saveQuizAttempt<T>(
 
 // Both assessment entry points use the complete server-defined question set.
 export async function getAssessmentQuestions(db: Pick<PoolClient, "query">, quizId: string) {
-  const { rows } = await db.query<{ id: string; prompt: string; options: string[]; correct_index: number }>(
-    "SELECT id, prompt, options, correct_index FROM questions WHERE quiz_id=$1 ORDER BY id", [quizId],
+  const { rows } = await db.query<{ id: string; prompt: string; options: string[]; correct_index: number; explanation: string | null }>(
+    "SELECT id, prompt, options, correct_index, explanation FROM questions WHERE quiz_id=$1 ORDER BY id", [quizId],
   );
   return rows;
+}
+
+export type AnswerReview = { question_id: string; picked: number | null; correct_index: number; explanation: string | null };
+
+// Per-question feedback for practice quizzes only: an assessment never reveals its solutions.
+export function buildAnswerReview(
+  questions: Array<{ id: string; correct_index: number; explanation?: string | null }>,
+  answers: Record<string, number>,
+): AnswerReview[] {
+  return questions.map((question) => ({
+    question_id: question.id,
+    picked: Object.hasOwn(answers, question.id) ? answers[question.id] : null,
+    correct_index: question.correct_index,
+    explanation: question.explanation ?? null,
+  }));
 }
 
 export function validateAssessmentAnswers(

@@ -78,7 +78,7 @@ test("a teacher can generate and save a quiz from a PDF", async ({ page }) => {
   await expect(page.getByText(quiz.title).last()).toBeVisible();
 });
 
-test("the quiz player requests and completes a personalized question set", async ({ page }) => {
+test("the quiz player completes a personalized question set and explains the answers", async ({ page }) => {
   const student = { ...teacher, id: "00000000-0000-4000-8000-000000000011", role: "student" };
   await page.addInitScript(({ student }) => {
     localStorage.setItem("mentora_user", JSON.stringify(student));
@@ -93,7 +93,10 @@ test("the quiz player requests and completes a personalized question set", async
       correct_index: 0,
       difficulty: 3,
     }]);
-    if (path.endsWith("/attempt")) return json(route, { score: 100, correct: 1, total: 1 });
+    if (path.endsWith("/attempt")) return json(route, {
+      score: 100, correct: 1, total: 1,
+      review: [{ question_id: "00000000-0000-4000-8000-000000000031", picked: 0, correct_index: 0, explanation: "A tanuló korábbi válaszaihoz igazodik." }],
+    });
     return json(route, {});
   });
 
@@ -102,6 +105,7 @@ test("the quiz player requests and completes a personalized question set", async
   await page.getByText("Helyes", { exact: true }).click();
   await page.getByRole("button", { name: "Befejezés" }).click();
   await expect(page.getByText("100%")).toBeVisible();
+  await expect(page.getByText("A tanuló korábbi válaszaihoz igazodik.")).toBeVisible();
 });
 
 test("student tab switching keeps the quiz list mounted and chat accessible", async ({ page }) => {

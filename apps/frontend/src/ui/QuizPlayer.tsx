@@ -3,12 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { getAdaptiveQuizQuestions, submitQuizAttempt, QuizResult } from "../api/quizzes";
 import { ApiError, getErrorMessage } from "../api/http";
 import { getOfflineQuiz, queueOfflineAttempt } from "../infra/offlineQuizzes";
+import { AnswerReview } from "./AnswerReview";
 
 type Question = {
   id: string;
   prompt: string;
   options: string[];
   correct_index?: number;
+  explanation?: string | null;
 };
 
 export const QuizPlayer = () => {
@@ -65,7 +67,17 @@ export const QuizPlayer = () => {
         const correct = questions.filter((question) => answers[question.id] === question.correct_index).length;
         const score = questions.length ? Math.round((correct / questions.length) * 100) : 0;
         queueOfflineAttempt(id, answers);
-        setResult({ score, correct, total: questions.length });
+        setResult({
+          score,
+          correct,
+          total: questions.length,
+          review: questions.map((question) => ({
+            question_id: question.id,
+            picked: answers[question.id] ?? null,
+            correct_index: question.correct_index ?? -1,
+            explanation: question.explanation ?? null,
+          })),
+        });
         return;
       }
       const res = await submitQuizAttempt(id, answers);
@@ -135,6 +147,9 @@ export const QuizPlayer = () => {
           {result.correct} / {result.total} helyes válasz
         </div>
         {offline && <p className="offline-note">Offline kitöltés. Az eredmény internetkapcsolatkor automatikusan szinkronizálódik.</p>}
+        {result.review
+          ? <AnswerReview questions={questions} review={result.review} />
+          : <p className="answer-review-note">Vizsgánál a helyes válaszokat és a magyarázatokat nem jelenítjük meg.</p>}
 
         <button 
           onClick={() => navigate('/')} 

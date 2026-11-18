@@ -116,6 +116,7 @@ export const Results = () => {
                       <div className="answer-correct">
                         Helyes: {q.options[correct]}
                       </div>
+                      {q.explanation && <div className="answer-explanation">Magyarázat: {q.explanation}</div>}
                     </div>
                   );
                 })}
