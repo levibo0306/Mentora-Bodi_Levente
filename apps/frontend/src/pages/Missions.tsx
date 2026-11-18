@@ -28,7 +28,7 @@ export const Missions = () => {
   const grouped = useMemo(() => {
     const map = new Map<string, Mission[]>();
     for (const m of missions) {
-      const key = String(m.date ?? "");
+      const key = String(m.date ?? "").slice(0, 10);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(m);
     }
@@ -71,7 +71,7 @@ export const Missions = () => {
             {grouped.map(([date, items]) => (
               <div key={date} className="mission-day">
                 <div className="mission-day-title">
-                  {new Date(date).toLocaleDateString("hu-HU")}
+                  {new Date(`${date}T00:00:00`).toLocaleDateString("hu-HU")}
                 </div>
                 <div className="mission-grid">
                   {items.map((m) => {

@@ -139,3 +139,36 @@ test("student tab switching keeps the quiz list mounted and chat accessible", as
 
   expect(quizListRequests).toBe(requestsAfterInitialLoad);
 });
+
+test("the share dialog keeps keyboard focus inside and returns it on Escape", async ({ page }) => {
+  await page.addInitScript(({ teacher }) => {
+    localStorage.setItem("mentora_user", JSON.stringify(teacher));
+    localStorage.setItem("mentora_token", "e2e-token");
+  }, { teacher });
+  await page.route("http://localhost:3001/api/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (path === "/api/users/me/overview") return json(route, {
+      role: "teacher", stats: { active_quizzes: 1, total_students: 0, total_attempts: 0, avg_score: 0 },
+      badges: [], xp: 0, level: 0, rank: "Tanár", daily_missions: [],
+    });
+    if (path === "/api/quizzes" && request.method() === "GET") return json(route, [quiz]);
+    return json(route, []);
+  });
+
+  await page.goto("/");
+  const opener = page.getByRole("button", { name: "Megosztás", exact: true }).first();
+  await opener.click();
+  const dialog = page.getByRole("dialog", { name: /Kvíz Megosztása/ });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Bezárás" })).toBeFocused();
+
+  for (let step = 0; step < 12; step++) {
+    await page.keyboard.press("Tab");
+    expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+  }
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(opener).toBeFocused();
+});

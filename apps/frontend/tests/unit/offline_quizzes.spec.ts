@@ -72,4 +72,31 @@ describe("offline quizzes", () => {
     await expect(syncOfflineAttempts(submit)).resolves.toBe(0);
     expect(submit).not.toHaveBeenCalled();
   });
+
+  test("drops attempts that the server permanently rejected", async () => {
+    queueOfflineAttempt(quiz.id, { "question-1": 0 });
+    const rejected = vi.fn(async () => { throw Object.assign(new Error("Not found"), { status: 404 }); });
+
+    await expect(syncOfflineAttempts(rejected)).resolves.toBe(0);
+    const retry = vi.fn(async () => undefined);
+    await expect(syncOfflineAttempts(retry)).resolves.toBe(0);
+    expect(retry).not.toHaveBeenCalled();
+  });
+
+  test("submits each attempt once when two syncs overlap and keeps newly queued attempts", async () => {
+    queueOfflineAttempt(quiz.id, { "question-1": 0 });
+    let release!: () => void;
+    const submit = vi.fn(() => new Promise<void>((resolve) => { release = resolve; }));
+
+    const first = syncOfflineAttempts(submit);
+    const second = syncOfflineAttempts(submit);
+    queueOfflineAttempt("quiz-2", { "question-2": 1 });
+    release();
+
+    await expect(Promise.all([first, second])).resolves.toEqual([1, 1]);
+    expect(submit).toHaveBeenCalledTimes(1);
+    const later = vi.fn(async () => undefined);
+    await expect(syncOfflineAttempts(later)).resolves.toBe(1);
+    expect(later).toHaveBeenCalledWith("quiz-2", { "question-2": 1 });
+  });
 });

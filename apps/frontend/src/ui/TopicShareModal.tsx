@@ -1,3 +1,4 @@
+import { useDialog } from "./useDialog";
 import React, { useState } from "react";
 import { shareTopic } from "../api/topics";
 import { getErrorMessage } from "../api/http";
@@ -37,14 +38,16 @@ export const TopicShareModal: React.FC<Props> = ({ topicId, topicName, isOpen, o
     await navigator.clipboard.writeText(text);
   };
 
+  const { dialogProps, titleId } = useDialog(isOpen, onClose);
+
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay active" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} {...dialogProps}>
         <div className="modal-header">
-          <h2 className="modal-title">📤 Téma megosztása</h2>
-          <button className="close-btn" onClick={onClose}>&times;</button>
+          <h2 className="modal-title" id={titleId}>📤 Téma megosztása</h2>
+          <button type="button" className="close-btn" onClick={onClose} aria-label="Bezárás">&times;</button>
         </div>
         <div className="modal-body">
           <div className="card section">

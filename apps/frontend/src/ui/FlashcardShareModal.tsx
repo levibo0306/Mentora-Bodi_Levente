@@ -1,3 +1,4 @@
+import { useDialog } from "./useDialog";
 import { useState } from "react";
 import { shareFlashcardPack } from "../api/flashcards";
 import { getErrorMessage } from "../api/http";
@@ -9,6 +10,7 @@ export function FlashcardShareModal({ packId, title, onClose }: Props) {
   const [links, setLinks] = useState<Array<{ token: string; recipient_email?: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { dialogProps, titleId } = useDialog(true, onClose);
 
   const generate = async () => {
     setLoading(true);
@@ -25,8 +27,8 @@ export function FlashcardShareModal({ packId, title, onClose }: Props) {
   };
 
   return <div className="modal-overlay active" onClick={onClose}>
-    <div className="modal-content" onClick={(event) => event.stopPropagation()}>
-      <div className="modal-header"><h2 className="modal-title">Flashcards megosztása</h2><button className="close-btn" onClick={onClose}>&times;</button></div>
+    <div className="modal-content" onClick={(event) => event.stopPropagation()} {...dialogProps}>
+      <div className="modal-header"><h2 className="modal-title" id={titleId}>Flashcards megosztása</h2><button type="button" className="close-btn" onClick={onClose} aria-label="Bezárás">&times;</button></div>
       <div className="modal-body">
         <div className="summary-row"><strong>{title}</strong></div>
         {error && <div className="inline-status error">{error}</div>}

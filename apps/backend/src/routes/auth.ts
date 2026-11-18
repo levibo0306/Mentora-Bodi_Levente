@@ -22,15 +22,21 @@ authRouter.post("/register", asyncRoute(async (req, res) => {
 
     const r = await pool.query(
       "insert into users(username,email,password_hash,role) values($1,$2,$3,$4) returning id,username,email,role",
-      [username.trim().toLowerCase(), email.toLowerCase(), password_hash, role]
+      [username.trim().toLowerCase(), email.trim().toLowerCase(), password_hash, role]
     );
 
     const user = r.rows[0];
     const token = signToken({ sub: user.id, email: user.email, role: user.role });
     res.status(201).json({ token, user });
   } catch (err: any) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: "Ellenőrizd a regisztrációs adatokat (felhasználónév 3–24 karakter, érvényes email, legalább 6 karakteres jelszó)." });
+    }
+    if (err?.code === "23505") {
+      return res.status(409).json({ error: "Ez a felhasználónév vagy email cím már foglalt." });
+    }
     console.error("Register error:", err);
-    res.status(400).json({ error: err.message || "Registration failed" });
+    res.status(500).json({ error: "A regisztráció nem sikerült." });
   }
 }));
 
@@ -63,8 +69,11 @@ authRouter.post("/login", asyncRoute(async (req, res) => {
     const token = signToken({ sub: u.id, email: u.email, role: u.role });
     res.json({ token, user: { id: u.id, username: u.username, email: u.email, role: u.role } });
   } catch (err: any) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: "Add meg a felhasználóneved vagy email címed és a jelszavad." });
+    }
     console.error("Login error:", err);
-    res.status(400).json({ error: err.message || "Login failed" });
+    res.status(500).json({ error: "A bejelentkezés nem sikerült." });
   }
 }));
 

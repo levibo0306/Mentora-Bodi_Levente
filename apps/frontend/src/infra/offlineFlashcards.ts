@@ -1,4 +1,5 @@
 import type { Flashcard, FlashcardPack } from "../api/flashcards";
+import { isPermanentSyncError } from "./offlineQuizzes";
 
 export type OfflineFlashcardPack = FlashcardPack & {
   cards: Flashcard[];
@@ -101,22 +102,31 @@ export const queueOfflineFlashcardReview = (packId: string, cardId: string, qual
   localStorage.setItem(reviewsKey(), JSON.stringify(pending));
 };
 
-export async function syncOfflineFlashcardReviews(
+let reviewSync: Promise<number> | null = null;
+
+export function syncOfflineFlashcardReviews(
   submit: (packId: string, cardId: string, quality: number) => Promise<unknown>
 ) {
+  reviewSync ??= runReviewSync(submit).finally(() => { reviewSync = null; });
+  return reviewSync;
+}
+
+async function runReviewSync(submit: (packId: string, cardId: string, quality: number) => Promise<unknown>) {
   if (!navigator.onLine) return 0;
-  const pending = read<PendingReview[]>(reviewsKey(), []);
-  const remaining: PendingReview[] = [];
+  const key = reviewsKey();
+  const pending = read<PendingReview[]>(key, []);
+  const done = new Set<string>();
   let synced = 0;
 
   for (const review of pending) {
     try {
       await submit(review.packId, review.cardId, review.quality);
+      done.add(review.id);
       synced += 1;
-    } catch {
-      remaining.push(review);
+    } catch (error) {
+      if (isPermanentSyncError(error)) done.add(review.id);
     }
   }
-  localStorage.setItem(reviewsKey(), JSON.stringify(remaining));
+  localStorage.setItem(key, JSON.stringify(read<PendingReview[]>(key, []).filter((item) => !done.has(item.id))));
   return synced;
 }

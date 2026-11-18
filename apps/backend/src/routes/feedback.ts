@@ -72,6 +72,7 @@ feedbackRouter.get("/contacts", requireAuth, asyncRoute(async (req, res) => {
              EXISTS (SELECT 1 FROM topic_shares ts JOIN topics t ON t.id=ts.topic_id WHERE ts.recipient_id=$1 AND t.owner_id=u.id)
              OR EXISTS (SELECT 1 FROM quiz_shares qs JOIN quizzes q ON q.id=qs.quiz_id WHERE qs.recipient_id=$1 AND q.owner_id=u.id)
              OR EXISTS (SELECT 1 FROM flashcard_shares fs JOIN flashcard_packs p ON p.id=fs.pack_id WHERE fs.recipient_id=$1 AND p.owner_id=u.id)
+             OR EXISTS (SELECT 1 FROM attempts a JOIN quizzes q ON q.id=a.quiz_id WHERE a.user_id=$1 AND q.owner_id=u.id)
              OR EXISTS (SELECT 1 FROM feedback_messages f WHERE f.student_id=$1 AND f.teacher_id=u.id)
            ) ORDER BY u.username`, [userId]);
     res.json(result.rows);

@@ -179,6 +179,14 @@ shareRouter.post("/share/:token/submit", optionalAuth, asyncRoute(async (req, re
     const { score, max, scorePercent } = await saveQuizAttempt(quizId, userId, async (client, assessment) => {
       const questions = await getAssessmentQuestions(client, quizId);
       if (assessment) validateAssessmentAnswers(questions, answers);
+      else {
+        // Practice links accept partial answers, but only for questions of this quiz.
+        const ids = new Set(questions.map((question) => question.id));
+        const answered = Object.keys(answers);
+        if (!answered.length || answered.some((questionId) => !ids.has(questionId))) {
+          throw new QuizAttemptError(400, "A válaszok között érvénytelen kérdés szerepel.");
+        }
+      }
 
       let score = 0;
       for (const row of questions) {

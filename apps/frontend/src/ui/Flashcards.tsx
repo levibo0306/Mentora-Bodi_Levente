@@ -4,7 +4,7 @@ import { getTopics, Topic } from "../api/topics";
 import { getImportableQuizzes, Quiz } from "../api/quizzes";
 import { useAuth } from "../context/AuthContext";
 import { trackActivity } from "../api/users";
-import { getErrorMessage } from "../api/http";
+import { ApiError, getErrorMessage } from "../api/http";
 import { FlashcardShareModal } from "./FlashcardShareModal";
 import {
   applyOfflineFlashcardReview,
@@ -146,7 +146,12 @@ export const Flashcards = ({ topicId: fixedTopicId = null }: Props) => {
       try {
         await reviewFlashcard(activePack.id, card.id, quality);
         if (offlinePackIds.has(activePack.id)) applyOfflineFlashcardReview(activePack.id, card.id, quality);
-      } catch {
+      } catch (error) {
+        // Only network/server failures are queued; a rejected review (e.g. deleted card) is not retried.
+        if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+          setStatus(getErrorMessage(error, "Nem sikerült menteni az értékelést."));
+          return;
+        }
         reviewedOffline = true;
       }
     }
@@ -204,7 +209,7 @@ export const Flashcards = ({ topicId: fixedTopicId = null }: Props) => {
     </div>
     <div className="card flashcard-claim"><div><strong>Megosztott Flashcards hozzáadása</strong><span>Írd be a kapott kódot.</span></div><input value={claimCode} onChange={(event) => setClaimCode(event.target.value)} placeholder="Megosztási kód" /><button className="btn btn-secondary" disabled={busy || !claimCode.trim()} onClick={claimPack}>Hozzáadás</button></div>
     {status && <div className="inline-status">{status}</div>}
-    {packs.length === 0 ? <div className="empty-state"><p>Még nincs Flashcards csomagod. Hozd létre az elsőt legalább egy kártyával.</p></div> : <div className="pack-grid">{packs.map((pack) => <article className="pack-tile" key={pack.id}><div className="pack-tile-top"><span>{pack.topic_name ?? "Önálló Flashcards"}{offlinePackIds.has(pack.id) ? " · Offline" : ""}</span><strong>{pack.card_count}</strong></div><h3>{pack.title}</h3><p>{pack.description || "Gyakorlásra kész fogalomcsomag."}</p><div className="pack-progress"><span>{pack.due_count || pack.card_count} esedékes</span><span>{pack.review_count} ismétlés</span></div><div className="pack-actions"><button className="btn btn-primary" onClick={() => openPack(pack)}>Gyakorlás</button><button className="btn btn-secondary" disabled={offlineBusyId === pack.id} onClick={() => toggleOffline(pack)}>{offlineBusyId === pack.id ? "Mentés..." : offlinePackIds.has(pack.id) ? "Offline törlése" : "Offline letöltés"}</button>{pack.owner_id === user?.id && <><button className="btn btn-secondary" onClick={() => setSharePack(pack)}>Megosztás</button><button className="btn btn-secondary" onClick={async () => { setStats(await getFlashcardPackStats(pack.id)); setStatsPackId(pack.id); }}>Statisztika</button><button className="text-button danger" onClick={async () => { if (confirm("Törlöd a teljes Flashcards csomagot?")) { await deleteFlashcardPack(pack.id); removeOfflineFlashcardPack(pack.id); await loadPacks(); } }}>Törlés</button></>}</div>{stats && statsPackId === pack.id && <div className="pack-stats">{stats.length ? stats.map((row) => <div key={row.student_id}><strong>{row.username}</strong><span>{row.reviews} ismétlés · {row.success_rate}%</span></div>) : <span>Még nincs tanulási adat.</span>}</div>}</article>)}</div>}
+    {packs.length === 0 ? <div className="empty-state"><p>Még nincs Flashcards csomagod. Hozd létre az elsőt legalább egy kártyával.</p></div> : <div className="pack-grid">{packs.map((pack) => <article className="pack-tile" key={pack.id}><div className="pack-tile-top"><span>{pack.topic_name ?? "Önálló Flashcards"}{offlinePackIds.has(pack.id) ? " · Offline" : ""}</span><strong>{pack.card_count}</strong></div><h3>{pack.title}</h3><p>{pack.description || "Gyakorlásra kész fogalomcsomag."}</p><div className="pack-progress"><span>{pack.due_count ?? pack.card_count} esedékes</span><span>{pack.review_count} ismétlés</span></div><div className="pack-actions"><button className="btn btn-primary" onClick={() => openPack(pack)}>Gyakorlás</button><button className="btn btn-secondary" disabled={offlineBusyId === pack.id} onClick={() => toggleOffline(pack)}>{offlineBusyId === pack.id ? "Mentés..." : offlinePackIds.has(pack.id) ? "Offline törlése" : "Offline letöltés"}</button>{pack.owner_id === user?.id && <><button className="btn btn-secondary" onClick={() => setSharePack(pack)}>Megosztás</button><button className="btn btn-secondary" onClick={async () => { setStats(await getFlashcardPackStats(pack.id)); setStatsPackId(pack.id); }}>Statisztika</button><button className="text-button danger" onClick={async () => { if (confirm("Törlöd a teljes Flashcards csomagot?")) { await deleteFlashcardPack(pack.id); removeOfflineFlashcardPack(pack.id); await loadPacks(); } }}>Törlés</button></>}</div>{stats && statsPackId === pack.id && <div className="pack-stats">{stats.length ? stats.map((row) => <div key={row.student_id}><strong>{row.username}</strong><span>{row.reviews} ismétlés · {row.success_rate}%</span></div>) : <span>Még nincs tanulási adat.</span>}</div>}</article>)}</div>}
     {sharePack && <FlashcardShareModal packId={sharePack.id} title={sharePack.title} onClose={() => setSharePack(null)} />}
   </div>;
 };

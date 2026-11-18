@@ -58,7 +58,7 @@ export const QuizPlayer = () => {
   };
 
   const finishQuiz = async () => {
-    if (!id) return;
+    if (!id || loading) return;
     try {
       setLoading(true);
       if (offline) {
@@ -181,14 +181,16 @@ export const QuizPlayer = () => {
 
         <div className="options-container">
           {question.options.map((opt, idx) => (
-            <div 
-              key={idx}
+            <button
+              type="button"
+              key={`${question.id}-${idx}`}
               onClick={() => handleSelect(idx)}
+              aria-pressed={selectedOption === idx}
               className={`option-card ${selectedOption === idx ? 'selected' : ''}`}
             >
-              <div className="option-radio"></div>
+              <span className="option-radio" />
               <span>{opt}</span>
-            </div>
+            </button>
           ))}
         </div>
 

@@ -58,7 +58,7 @@ function ollamaConfig() {
   const apiKey = process.env.OLLAMA_API_KEY?.trim();
   return {
     baseUrl,
-    model: process.env.OLLAMA_MODEL ?? "qwen3:4b",
+    model: process.env.OLLAMA_MODEL?.trim() || "qwen3:4b",
     headers: {
       "Content-Type": "application/json",
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
@@ -73,10 +73,16 @@ export class AiServiceError extends Error {
   }
 }
 
+function numberFromEnv(name: string, fallback: number) {
+  const raw = process.env[name]?.trim();
+  const value = raw ? Number(raw) : NaN;
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
 export async function generateQuizFromText(textContext: string, count = 5, externalSignal?: AbortSignal): Promise<GeneratedQuestion[]> {
   const { baseUrl, model, headers } = ollamaConfig();
-  const timeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS ?? 120_000);
-  const contextSize = Math.min(8_192, Math.max(2_048, Number(process.env.OLLAMA_NUM_CTX ?? 4_096)));
+  const timeoutMs = numberFromEnv("OLLAMA_TIMEOUT_MS", 120_000);
+  const contextSize = Math.min(8_192, Math.max(2_048, numberFromEnv("OLLAMA_NUM_CTX", 4_096)));
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const abortFromCaller = () => controller.abort();

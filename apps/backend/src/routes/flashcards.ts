@@ -36,7 +36,8 @@ flashcardsRouter.get("/packs", requireAuth, asyncRoute(async (req, res) => {
       `SELECT p.id, p.title, p.description, p.topic_id, p.owner_id, p.created_at, p.updated_at,
               t.name AS topic_name, u.username AS owner_name,
               COUNT(DISTINCT c.id)::int AS card_count,
-              COUNT(DISTINCT CASE WHEN r.user_id=$1 AND r.due_at<=now() THEN r.card_id END)::int AS due_count,
+              -- A card the user has never reviewed is due immediately.
+              COUNT(DISTINCT CASE WHEN c.id IS NOT NULL AND (r.card_id IS NULL OR r.due_at<=now()) THEN c.id END)::int AS due_count,
               COALESCE(SUM(CASE WHEN r.user_id=$1 THEN r.review_count ELSE 0 END),0)::int AS review_count
        FROM flashcard_packs p
        LEFT JOIN flashcards c ON c.pack_id=p.id
@@ -80,6 +81,10 @@ flashcardsRouter.get("/packs/:id", requireAuth, asyncRoute(async (req, res) => {
 flashcardsRouter.post("/packs", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user.sub;
   const body = PackSchema.parse(req.body);
+  if (body.topic_id) {
+    const topic = await pool.query("SELECT 1 FROM topics WHERE id=$1 AND owner_id=$2", [body.topic_id, userId]);
+    if (!topic.rowCount) return res.status(403).json({ error: "A csomagot csak saját témához rendelheted." });
+  }
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -110,6 +115,7 @@ flashcardsRouter.post("/packs/import-quiz", requireAuth, asyncRoute(async (req, 
   if (!parsed.success) return res.status(400).json({ error: "Érvénytelen kvízimport." });
   const { quiz_id, title } = parsed.data;
   const client = await pool.connect();
+  let inTransaction = false;
   try {
     const quizResult = await client.query(
       `SELECT q.* FROM quizzes q WHERE q.id=$1 AND (q.owner_id=$2 OR EXISTS
@@ -124,6 +130,7 @@ flashcardsRouter.post("/packs/import-quiz", requireAuth, asyncRoute(async (req, 
     );
     if (!questions.rowCount) return res.status(400).json({ error: "A kvízben nincs importálható kérdés." });
     await client.query("BEGIN");
+    inTransaction = true;
     const result = await client.query(
       `INSERT INTO flashcard_packs(owner_id,topic_id,title,description) VALUES($1,$2,$3,$4) RETURNING *`,
       [userId, quiz.topic_id, title ?? `${quiz.title} - ismétlőkártyák`, "Kvízből automatikusan létrehozva."]
@@ -141,7 +148,7 @@ flashcardsRouter.post("/packs/import-quiz", requireAuth, asyncRoute(async (req, 
     await recordLearningEvent(userId, "import_quiz_cards", questions.rowCount ?? 0, { pack_id: pack.id });
     res.status(201).json({ ...pack, card_count: questions.rowCount });
   } catch (error) {
-    await client.query("ROLLBACK");
+    if (inTransaction) await client.query("ROLLBACK").catch(() => undefined);
     console.error(error);
     res.status(500).json({ error: "Nem sikerült Flashcards csomagot készíteni a kvízből." });
   } finally { client.release(); }

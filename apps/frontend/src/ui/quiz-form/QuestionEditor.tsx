@@ -2,11 +2,13 @@ type Props = {
   prompt: string;
   options: string[];
   correctIndex: number;
+  explanation: string;
   difficulty: number;
   isEditing: boolean;
   onPromptChange: (value: string) => void;
   onOptionsChange: (value: string[]) => void;
   onCorrectIndexChange: (value: number) => void;
+  onExplanationChange: (value: string) => void;
   onDifficultyChange: (value: number) => void;
   onSave: () => void;
   onCancel: () => void;
@@ -31,10 +33,26 @@ export function QuestionEditor(props: Props) {
       <div className="options-grid">
         {props.options.map((option, index) => (
           <div key={index} className="option-row">
-            <input type="radio" checked={props.correctIndex === index} onChange={() => props.onCorrectIndexChange(index)} />
-            <input value={option} onChange={(event) => changeOption(index, event.target.value)} placeholder={`Válasz ${index + 1}`} />
+            <input
+              type="radio"
+              name="correct-option"
+              aria-label={`${index + 1}. válasz helyes`}
+              checked={props.correctIndex === index}
+              onChange={() => props.onCorrectIndexChange(index)}
+            />
+            <input value={option} onChange={(event) => changeOption(index, event.target.value)} placeholder={`Válasz ${index + 1}`} aria-label={`${index + 1}. válaszlehetőség`} />
           </div>
         ))}
+      </div>
+      <div className="input-group">
+        <label htmlFor="question-explanation">Magyarázat (opcionális)</label>
+        <textarea
+          id="question-explanation"
+          rows={2}
+          value={props.explanation}
+          onChange={(event) => props.onExplanationChange(event.target.value)}
+          placeholder="Miért ez a helyes válasz?"
+        />
       </div>
       <div className="difficulty-slider">
         <label>Nehézség: <strong>{props.difficulty}</strong></label>

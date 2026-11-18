@@ -1,5 +1,5 @@
 import { asyncRoute } from "../middleware/asyncRoute";
-import { Router } from "express";
+import { Router, type Response } from "express";
 import { z } from "zod";
 import { pool } from "../db";
 import { requireAuth } from "../middleware/auth";
@@ -105,20 +105,24 @@ quizzesRouter.get("/shared-with-me", requireAuth, asyncRoute(async (req, res) =>
 
   try {
     const r = await pool.query(
-      `SELECT 
-          q.id, q.title, q.description, q.mode, q.owner_id, (q.owner_id=$1) AS is_owner,
-          q.created_at, q.updated_at,
-          s.token, s.created_at as shared_at,
-          (q.mode IS DISTINCT FROM 'assessment' AND s.allow_reshare) AS allow_reshare,
-          COALESCE(owner.username, owner.email) as owner_display,
-          COALESCE(sharer.username, sharer.email) as shared_by_display,
-          (SELECT COUNT(*) FROM questions WHERE quiz_id = q.id)::int as question_count
-       FROM quiz_shares s
-       JOIN quizzes q ON q.id = s.quiz_id
-       LEFT JOIN users owner ON owner.id = q.owner_id
-       LEFT JOIN users sharer ON sharer.id = s.shared_by
-       WHERE s.recipient_id = $1 AND (q.mode IS DISTINCT FROM 'assessment' OR s.shared_by=q.owner_id)
-       ORDER BY s.created_at DESC LIMIT 50`,
+      `SELECT * FROM (
+         SELECT DISTINCT ON (q.id)
+           q.id, q.title, q.description, q.mode, q.owner_id, (q.owner_id=$1) AS is_owner,
+           q.created_at, q.updated_at,
+           s.token, s.created_at as shared_at,
+           (q.mode IS DISTINCT FROM 'assessment' AND s.allow_reshare) AS allow_reshare,
+           COALESCE(owner.username, owner.email) as owner_display,
+           COALESCE(sharer.username, sharer.email) as shared_by_display,
+           (SELECT COUNT(*) FROM questions WHERE quiz_id = q.id)::int as question_count
+         FROM quiz_shares s
+         JOIN quizzes q ON q.id = s.quiz_id
+         LEFT JOIN users owner ON owner.id = q.owner_id
+         LEFT JOIN users sharer ON sharer.id = s.shared_by
+         WHERE s.recipient_id = $1 AND (q.mode IS DISTINCT FROM 'assessment' OR s.shared_by=q.owner_id)
+         -- One card per quiz, even if it was shared with the same user more than once.
+         ORDER BY q.id, s.allow_reshare DESC, s.created_at DESC
+       ) shared
+       ORDER BY shared_at DESC LIMIT 50`,
       [userId]
     );
     res.json(r.rows);
@@ -345,12 +349,23 @@ quizzesRouter.delete("/:id", requireAuth, asyncRoute(async (req, res) => {
  */
 
 const QuestionSchema = z.object({
-  prompt: z.string().min(1),
-  options: z.array(z.string()).min(2),
+  prompt: z.string().trim().min(1).max(1000),
+  options: z.array(z.string().trim().min(1).max(500)).min(2).max(10),
   correct_index: z.number().int().min(0),
-  explanation: z.string().nullable().optional(),
+  explanation: z.string().trim().max(2000).nullable().optional(),
   difficulty: z.number().int().min(1).max(5).optional(),
+}).refine((question) => question.correct_index < question.options.length, {
+  message: "A helyes válasz indexe nem mutathat üres vagy nem létező válaszlehetőségre.",
+  path: ["correct_index"],
 });
+
+function questionWriteError(res: Response, err: unknown) {
+  if (err instanceof z.ZodError) {
+    return res.status(400).json({ error: "Érvénytelen kérdésadatok: a kérdés, legalább két nem üres válasz és létező helyes válasz szükséges." });
+  }
+  console.error("Backend Error:", err);
+  return res.status(500).json({ error: "Database error" });
+}
 
 quizzesRouter.post("/:id/questions", requireAuth, asyncRoute(async (req, res) => {
   const userId = req.user?.sub;
@@ -379,15 +394,14 @@ quizzesRouter.post("/:id/questions", requireAuth, asyncRoute(async (req, res) =>
   body.prompt,
   JSON.stringify(body.options),
   body.correct_index,
-  body.explanation ?? null,
+  body.explanation || null,
   body.difficulty ?? 3
 ]
     );
 
     res.status(201).json(r.rows[0]);
-  } catch (err: any) {
-    console.error("Backend Error:", err);
-    res.status(400).json({ error: err.message ?? "Bad request" });
+  } catch (err) {
+    return questionWriteError(res, err);
   }
 }));
 
@@ -421,7 +435,7 @@ quizzesRouter.put("/:id/questions/:qid", requireAuth, asyncRoute(async (req, res
         body.prompt,
         JSON.stringify(body.options),
         body.correct_index,
-        body.explanation ?? null,
+        body.explanation || null,
         body.difficulty ?? 3,
         qid,
         id,
@@ -430,9 +444,8 @@ quizzesRouter.put("/:id/questions/:qid", requireAuth, asyncRoute(async (req, res
 
     if (r.rowCount === 0) return res.status(404).json({ error: "Question not found" });
     res.json(r.rows[0]);
-  } catch (err: any) {
-    console.error("Backend Error:", err);
-    res.status(400).json({ error: err.message ?? "Bad request" });
+  } catch (err) {
+    return questionWriteError(res, err);
   }
 }));
 

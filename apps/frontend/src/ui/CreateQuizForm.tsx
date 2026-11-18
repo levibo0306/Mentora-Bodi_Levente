@@ -100,14 +100,19 @@ export const CreateQuizForm = ({ quizId, onSuccess }: Props) => {
   const getQuestionFromInput = (): CreateQuestionDto | null => {
     if (!currentPrompt.trim()) return null;
 
-    const validOptions = options.filter(opt => opt.trim() !== '');
-    if (validOptions.length < 2) return null;
+    // Empty rows are dropped, so the selected answer has to be re-indexed among the remaining options.
+    const filled = options
+      .map((text, index) => ({ text: text.trim(), index }))
+      .filter((option) => option.text !== '');
+    if (filled.length < 2) return null;
+    const mappedCorrectIndex = filled.findIndex((option) => option.index === correctIndex);
+    if (mappedCorrectIndex < 0) return null;
 
     return {
-      prompt: currentPrompt,
-      options: validOptions,
-      correct_index: correctIndex,
-      explanation: explanation || undefined,
+      prompt: currentPrompt.trim(),
+      options: filled.map((option) => option.text),
+      correct_index: mappedCorrectIndex,
+      explanation: explanation.trim() || undefined,
       difficulty: difficulty
     };
   };
@@ -115,7 +120,9 @@ export const CreateQuizForm = ({ quizId, onSuccess }: Props) => {
   const handleAddQuestion = async () => {
     const q = getQuestionFromInput();
     if (!q) {
-      setError("Legalább a kérdést és 2 választ töltsd ki!");
+      setError(options[correctIndex]?.trim()
+        ? "Legalább a kérdést és 2 választ töltsd ki!"
+        : "A helyesnek jelölt válasz nem lehet üres. Jelöld meg a helyes választ egy kitöltött mezőnél!");
       return;
     }
     if (editingIndex !== null) {
@@ -342,11 +349,13 @@ export const CreateQuizForm = ({ quizId, onSuccess }: Props) => {
             prompt={currentPrompt}
             options={options}
             correctIndex={correctIndex}
+            explanation={explanation}
             difficulty={difficulty}
             isEditing={editingIndex !== null}
             onPromptChange={setCurrentPrompt}
             onOptionsChange={setOptions}
             onCorrectIndexChange={setCorrectIndex}
+            onExplanationChange={setExplanation}
             onDifficultyChange={setDifficulty}
             onSave={handleAddQuestion}
             onCancel={resetQuestionEditor}

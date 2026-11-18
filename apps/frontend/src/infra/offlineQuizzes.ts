@@ -63,22 +63,39 @@ export const queueOfflineAttempt = (quizId: string, answers: QuizSubmission) => 
   localStorage.setItem(queueKey(), JSON.stringify(pending));
 };
 
-export async function syncOfflineAttempts(
+// 4xx answers (except auth/timeout/rate limit) will never succeed on retry, e.g. a deleted quiz.
+export const isPermanentSyncError = (error: unknown) => {
+  const status = (error as { status?: unknown } | null)?.status;
+  return typeof status === "number" && status >= 400 && status < 500 && ![401, 408, 429].includes(status);
+};
+
+let attemptSync: Promise<number> | null = null;
+
+export function syncOfflineAttempts(
   submit: (quizId: string, answers: QuizSubmission) => Promise<unknown>
 ) {
+  // The "load" and "online" events can overlap; a second run would submit the same items twice.
+  attemptSync ??= runAttemptSync(submit).finally(() => { attemptSync = null; });
+  return attemptSync;
+}
+
+async function runAttemptSync(submit: (quizId: string, answers: QuizSubmission) => Promise<unknown>) {
   if (!navigator.onLine) return 0;
-  const pending = read<PendingAttempt[]>(queueKey(), []);
-  const remaining: PendingAttempt[] = [];
+  const key = queueKey();
+  const pending = read<PendingAttempt[]>(key, []);
+  const done = new Set<string>();
   let synced = 0;
 
   for (const attempt of pending) {
     try {
       await submit(attempt.quizId, attempt.answers);
+      done.add(attempt.id);
       synced += 1;
-    } catch {
-      remaining.push(attempt);
+    } catch (error) {
+      if (isPermanentSyncError(error)) done.add(attempt.id);
     }
   }
-  localStorage.setItem(queueKey(), JSON.stringify(remaining));
+  // Re-read so that attempts queued during the sync are kept.
+  localStorage.setItem(key, JSON.stringify(read<PendingAttempt[]>(key, []).filter((item) => !done.has(item.id))));
   return synced;
 }

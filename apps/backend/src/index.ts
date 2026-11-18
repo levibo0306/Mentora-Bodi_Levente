@@ -40,7 +40,8 @@ app.use((req, _res, next) => {
       level: "info",
       event: "http.request",
       method: req.method,
-      path: req.path,
+      // Share tokens grant access, so they are not written to the log.
+      path: req.path.replace(/^\/api\/share\/(?!claim$)[^/]+/, "/api/share/:token"),
     })
   );
   next();

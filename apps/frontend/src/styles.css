@@ -1767,6 +1767,19 @@ button:active, .btn:active {
   font-size: 16px;
 }
 
+button.option-card {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 16px;
+  color: inherit;
+}
+
+.option-card:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+}
+
 .option-card:hover {
   transform: translateX(8px);
   border-color: var(--primary);

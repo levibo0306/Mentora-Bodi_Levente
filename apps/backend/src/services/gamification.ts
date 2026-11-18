@@ -89,6 +89,11 @@ function todayKey(offsetMinutes = 0) {
   return adjusted.toISOString().slice(0, 10);
 }
 
+// The client sends Date#getTimezoneOffset(): local time = UTC - offset minutes.
+function localDayStart(dateKey: string, offsetMinutes = 0) {
+  return new Date(Date.parse(`${dateKey}T00:00:00.000Z`) + offsetMinutes * 60 * 1000).toISOString();
+}
+
 function yesterdayKey(offsetMinutes = 0) {
   const adjusted = new Date(Date.now() - offsetMinutes * 60 * 1000);
   adjusted.setUTCDate(adjusted.getUTCDate() - 1);
@@ -215,8 +220,9 @@ export async function ensureDailyMissions(userId: string, offsetMinutes = 0) {
 export async function updateStreakOnAttempt(userId: string, offsetMinutes = 0) {
   const date = todayKey(offsetMinutes);
   const prevDate = yesterdayKey(offsetMinutes);
+  // node-postgres maps DATE columns to JS Date objects; compare the ISO day string instead.
   const r = await pool.query(
-    "select * from user_streaks where user_id=$1",
+    "select current_streak, to_char(last_active_date, 'YYYY-MM-DD') as last_active_date from user_streaks where user_id=$1",
     [userId]
   );
   if (!r.rowCount || r.rowCount === 0) {
@@ -259,8 +265,8 @@ export async function recordLearningEvent(
   const missions = await ensureDailyMissions(userId, offsetMinutes);
   const date = todayKey(offsetMinutes);
   const eventRows = (await pool.query(
-    "SELECT event_type,amount,metadata FROM learning_events WHERE user_id=$1 AND created_at >= $2::date",
-    [userId, date]
+    "SELECT event_type,amount,metadata FROM learning_events WHERE user_id=$1 AND created_at >= $2::timestamptz",
+    [userId, localDayStart(date, offsetMinutes)]
   )).rows as Array<{ event_type: MissionType; amount: number; metadata: Record<string, unknown> }>;
   for (const mission of missions) {
     if (mission.completed_at) continue;
@@ -306,17 +312,19 @@ export async function getWeeklyGoal(userId: string, offsetMinutes = 0) {
     [userId, weekStart]
   );
   const goal = (await pool.query(
-    "SELECT * FROM weekly_goals WHERE user_id=$1 AND week_start=$2", [userId, weekStart]
+    `SELECT id,user_id,to_char(week_start,'YYYY-MM-DD') AS week_start,target_quizzes,target_flashcards,target_active_days,created_at
+     FROM weekly_goals WHERE user_id=$1 AND week_start=$2`, [userId, weekStart]
   )).rows[0];
+  // Week boundaries and active days follow the learner's local calendar, not the server time zone.
   const progress = (await pool.query(
     `SELECT
-       (SELECT COUNT(*)::int FROM attempts WHERE user_id=$1 AND created_at >= $2::date) AS quizzes,
-       (SELECT COALESCE(SUM(amount),0)::int FROM learning_events WHERE user_id=$1 AND event_type='review_flashcard' AND created_at >= $2::date) AS flashcards,
+       (SELECT COUNT(*)::int FROM attempts WHERE user_id=$1 AND created_at >= $2::timestamptz) AS quizzes,
+       (SELECT COALESCE(SUM(amount),0)::int FROM learning_events WHERE user_id=$1 AND event_type='review_flashcard' AND created_at >= $2::timestamptz) AS flashcards,
        (SELECT COUNT(DISTINCT day)::int FROM (
-          SELECT created_at::date AS day FROM attempts WHERE user_id=$1 AND created_at >= $2::date
-          UNION SELECT created_at::date AS day FROM learning_events WHERE user_id=$1 AND created_at >= $2::date
+          SELECT ((created_at AT TIME ZONE 'UTC') - make_interval(mins => $3::int))::date AS day FROM attempts WHERE user_id=$1 AND created_at >= $2::timestamptz
+          UNION SELECT ((created_at AT TIME ZONE 'UTC') - make_interval(mins => $3::int))::date AS day FROM learning_events WHERE user_id=$1 AND created_at >= $2::timestamptz
         ) active) AS active_days`,
-    [userId, weekStart]
+    [userId, localDayStart(weekStart, offsetMinutes), Math.trunc(offsetMinutes)]
   )).rows[0];
   return { ...goal, progress };
 }

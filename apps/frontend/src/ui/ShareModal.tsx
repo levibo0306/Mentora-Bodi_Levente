@@ -1,3 +1,4 @@
+import { useDialog } from "./useDialog";
 import React, { useState } from 'react';
 import { api, getErrorMessage } from '../api/http';
 
@@ -78,6 +79,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     onClose();
   };
 
+  const { dialogProps, titleId } = useDialog(isOpen, handleClose);
+
   if (!isOpen) return null;
 
   return (
@@ -85,11 +88,12 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       <div 
         className="modal-content" 
         onClick={(e) => e.stopPropagation()}
+        {...dialogProps}
         style={{ maxWidth: '600px' }}
       >
         <div className="modal-header">
-          <h2 className="modal-title">📤 Kvíz Megosztása</h2>
-          <button className="close-btn" onClick={handleClose}>&times;</button>
+          <h2 className="modal-title" id={titleId}>📤 Kvíz Megosztása</h2>
+          <button type="button" className="close-btn" onClick={handleClose} aria-label="Bezárás">&times;</button>
         </div>
 
         <div className="modal-body">
